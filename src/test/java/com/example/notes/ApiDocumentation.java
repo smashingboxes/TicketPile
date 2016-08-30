@@ -96,7 +96,7 @@ public class ApiDocumentation {
 			preprocessResponse(prettyPrint()));
 		
 		this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
-			.apply(documentationConfiguration(this.restDocumentation))
+			.applyDiscount(documentationConfiguration(this.restDocumentation))
 			.alwaysDo(this.documentationHandler)
 			.build();
 	}

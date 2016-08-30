@@ -5,13 +5,18 @@ import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import ticketpile.service.database.*
+import ticketpile.service.util.Children
+import ticketpile.service.util.IDDelegateOn
 
 /**
  * Created by jonlatane on 8/28/16.
  */
 open class Event(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Event>(Events)
-    internal val tickets by Ticket referrersOn Tickets.event
+    internal val tickets by Children(this, Ticket, Tickets.event)
+
+    @get:JsonProperty
+    val eventId by IDDelegateOn(this)
     @get:JsonProperty
     var startTime by Events.startTime
     @get:JsonProperty
@@ -39,6 +44,11 @@ class EventAddOn(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<EventAddOn>(EventAddOns)
     val event by EventAddOns.parent
     val booking by EventAddOns.booking
+
+    @get:JsonProperty
+    val eventAddOnId by IDDelegateOn(this)
+    @get:JsonProperty
     val addOnSelection by AddOn referencedOn EventAddOns.addon
+    @get:JsonProperty
     val amount by EventAddOns.amount
 }

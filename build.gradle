@@ -1,10 +1,13 @@
 buildscript {
-    ext.kotlin_version = '1.0.3' // Required for Kotlin integration
+    ext.kotlin_version = '1.0.4-eap-100' // Required for Kotlin integration
     ext.spring_boot_version = '1.4.0.RELEASE'
     //ext['jetty.version'] = '9.2.17.v20160517'
     repositories {
         jcenter()
         mavenCentral()
+        maven {
+            url 'https://dl.bintray.com/kotlin/kotlin-eap'
+        }
     }
     dependencies {
         classpath 'mysql:mysql-connector-java:5.1.37'
@@ -31,6 +34,9 @@ repositories {
     maven {
         url 'https://dl.bintray.com/kotlin/exposed/'
     }
+    maven {
+        url 'https://dl.bintray.com/kotlin/kotlin-eap'
+    }
 }
 
 configurations {
@@ -39,7 +45,7 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version" // Required for Kotlin integration
-    compile 'org.jetbrains.exposed:exposed:0.6.2'
+    compile 'org.jetbrains.exposed:exposed:0.6.3'
     compile("org.springframework.boot:spring-boot-starter-web")
     compile("org.springframework.boot:spring-boot-starter-jetty")
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.7.5"

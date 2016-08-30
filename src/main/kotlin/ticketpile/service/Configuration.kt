@@ -8,7 +8,7 @@ import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import ticketpile.service.database.TransactionSerializerModifier
+import ticketpile.service.util.TransactionSerializerModifier
 
 /**
  * Created by jonlatane on 8/29/16.
@@ -21,7 +21,6 @@ open class JacksonConfiguration {
         val mapper = ObjectMapper()
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         mapper.configure(MapperFeature.DEFAULT_VIEW_INCLUSION, true)
-        SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS
         mapper.disable(MapperFeature.AUTO_DETECT_CREATORS,
                 MapperFeature.AUTO_DETECT_FIELDS,
                 MapperFeature.AUTO_DETECT_GETTERS,
@@ -31,7 +30,6 @@ open class JacksonConfiguration {
         module.setSerializerModifier(TransactionSerializerModifier())
         mapper.registerModule(module)
         
-        val jodaModule = JodaModule()
         mapper.registerModule(JodaModule())
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS , false)
 

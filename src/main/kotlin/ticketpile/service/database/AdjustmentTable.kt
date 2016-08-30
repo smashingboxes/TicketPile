@@ -19,7 +19,7 @@ open class ReferenceTable(subject : RelatableTable) : IntIdTable() {
 }
 
 open class AdjustmentTable(subject : RelatableTable) : ReferenceTable(subject) {
-    val amount = decimal("amount", precision = 16, scale = 16)
+    val amount = decimal("amount", precision = 65, scale = 30)
 }
 
 open class DiscountTable(subject : RelatableTable) : AdjustmentTable(subject) {

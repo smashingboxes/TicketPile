@@ -23,7 +23,7 @@ object Events : RelatableTable("event") {
 
 object Tickets : RelatableTable("ticket") {
     val personCategory = reference("personCategory", PersonCategories)
-    val basePrice = decimal("baseprice", precision = 16, scale = 16)
+    val basePrice = decimal("baseprice", precision = 65, scale = 30)
     val event = reference("event", Events)
     val booking = reference("booking", Bookings)
 }
@@ -55,12 +55,14 @@ object Discounts : RelatableTable("discount") {
 object BookingAddOns : AddOnTable(Bookings)
 object BookingDiscounts : DiscountTable(Bookings)
 object BookingManualAdjustments : ManualAdjustmentTable(Bookings) 
-object TicketAddOns : AddOnTable(Tickets)
-object TicketDiscounts : DiscountTable(Tickets)
-object TicketManualAdjustments : ManualAdjustmentTable(Tickets)
 
 //Event Adjustments relate to an Event and a Booking
 //and affect pricing of all Tickets on an Event.
 object EventAddOns : AddOnTable(Events) {
     val booking = reference("booking", Bookings)
 }
+
+// Things not supported by ZOZI
+object TicketAddOns : AddOnTable(Tickets)
+object TicketDiscounts : DiscountTable(Tickets)
+object TicketManualAdjustments : ManualAdjustmentTable(Tickets)

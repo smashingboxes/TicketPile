@@ -1,4 +1,4 @@
-package ticketpile.service.database
+package ticketpile.service.util
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.BeanDescription
@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationConfig
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.transactions.TransactionManager
