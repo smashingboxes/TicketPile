@@ -1,8 +1,9 @@
 package ticketpile.service.webreserv
 
-import org.joda.time.DateTime
-import org.springframework.format.annotation.DateTimeFormat
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
 import ticketpile.service.model.Booking
 
 /**
@@ -12,31 +13,19 @@ import ticketpile.service.model.Booking
  */
 @RestController
 @RequestMapping(value = "/webreserv")
-class WebReservationController {
-    @RequestMapping(value = "/booking", method = arrayOf(RequestMethod.POST))
-    fun import(@RequestBody booking : WebReservation): Booking
-    {
-        val booking = Booking.new {
-
-        }
-        return booking
-    }
-    
+open class WebReservationController {
     @PostMapping(value = "/requestImport")
     fun requestImport(
             @RequestParam(value = "webreservHost", required = true)
-            host : String,
+            host: String,
             @RequestParam(value = "authKey", required = true)
-            authKey: String,
+            authorizationKey: String,
             @RequestParam(value = "locationId", required = true)
             locationId: Int,
             @RequestParam(value = "reservationId", required = true)
             reservationId: Int
-    ): Booking
-    {
-        val booking = Booking.new {
-
-        }
-        return booking
+    ): Booking {
+        return WRLocationManager(host, authorizationKey, locationId)
+                .importReservation(reservationId)
     }
 }

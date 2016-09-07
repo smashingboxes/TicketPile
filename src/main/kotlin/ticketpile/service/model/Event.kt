@@ -1,22 +1,20 @@
 package ticketpile.service.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import org.jetbrains.exposed.dao.*
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
-import ticketpile.service.database.*
-import ticketpile.service.util.Children
-import ticketpile.service.util.IDDelegateOn
+import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.dao.IntEntityClass
+import ticketpile.service.database.BookingItems
+import ticketpile.service.database.Events
+import ticketpile.service.util.PrimaryEntity
 
 /**
  * Created by jonlatane on 8/28/16.
  */
-open class Event(id: EntityID<Int>) : IntEntity(id) {
+open class Event(id: EntityID<Int>) : PrimaryEntity(id, Events) {
     companion object : IntEntityClass<Event>(Events)
-    internal val tickets by Children(this, Ticket, Tickets.event)
 
     @get:JsonProperty
-    val eventId by IDDelegateOn(this)
+    val eventId by PK
     @get:JsonProperty
     var startTime by Events.startTime
     @get:JsonProperty
@@ -26,29 +24,38 @@ open class Event(id: EntityID<Int>) : IntEntity(id) {
     @get:JsonProperty
     var capacity by Events.capacity
     @get:JsonProperty
-    val availability by lazy { capacity - tickets.count() }
+    val availability : Int by lazy { 
+        var utilization = 0
+        items.forEach { 
+            utilization += it.tickets.count()
+        }
+        capacity - utilization
+    }
+    @get:JsonProperty
+    val items by children(BookingItem,BookingItems.event)
 }
 
-class BookingEvent(val booking: Booking, val event: Event) {
+/*class BookingEvent(val booking: Booking, val event: Event) {
     val tickets = booking.tickets.filter { 
-        ticket -> ticket.event.id.equals(event.id)
+        ticket ->
+        ticket.event.id == event.id
     }
-    val addOns = EventAddOns.select {
-        EventAddOns.parent.eq(event.id) and EventAddOns.booking.eq(booking.id)
+    val addOns = BookingItemAddOns.select {
+        BookingItemAddOns.parent.eq(event.id) and BookingItemAddOns.booking.eq(booking.id)
     }.map {
-        it -> EventAddOn(it[EventAddOns.id])
+        it -> EventAddOn(it[BookingItemAddOns.id])
     }
-}
+}*/
+/*
+class EventAddOn(id: EntityID<Int>) : RelationalEntity(id) {
+    companion object : IntEntityClass<EventAddOn>(BookingItemAddOns)
+    var event by Event referencedOn BookingItemAddOns.parent
+    var booking by Booking referencedOn BookingItemAddOns.booking
 
-class EventAddOn(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<EventAddOn>(EventAddOns)
-    val event by EventAddOns.parent
-    val booking by EventAddOns.booking
-
     @get:JsonProperty
-    val eventAddOnId by IDDelegateOn(this)
+    val eventAddOnId by PK
     @get:JsonProperty
-    val addOnSelection by AddOn referencedOn EventAddOns.addon
+    var addOn by AddOn referencedOn BookingItemAddOns.addon
     @get:JsonProperty
-    val amount by EventAddOns.amount
-}
+    var amount by BookingItemAddOns.amount
+}*/

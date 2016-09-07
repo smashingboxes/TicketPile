@@ -1,54 +1,49 @@
 package ticketpile.service.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.springframework.boot.SpringApplication
-import org.springframework.boot.autoconfigure.SpringBootApplication
-import ticketpile.service.database.*
-import ticketpile.service.util.IDDelegateOn
+import ticketpile.service.database.AddOns
+import ticketpile.service.database.Discounts
+import ticketpile.service.database.Products
+import ticketpile.service.util.PrimaryEntity
+import ticketpile.service.util.RelationalEntity
 import java.math.BigDecimal
-import kotlin.reflect.KProperty
 
 
 /**
  * Created by jonlatane on 8/28/16.
  */
 
-class Product(id: EntityID<Int>) : IntEntity(id) {
+class Product(id: EntityID<Int>) : PrimaryEntity(id, Products) {
     companion object : IntEntityClass<Product>(Products)
     @get:JsonProperty
     var name by Products.name
     @get:JsonProperty
     var description by Products.description
     @get:JsonProperty
-    val productId by IDDelegateOn(this)
+    val productId by PK
 }
 
-class AddOn(id: EntityID<Int>) : IntEntity(id) {
+class AddOn(id: EntityID<Int>) : RelationalEntity(id) {
     companion object : IntEntityClass<AddOn>(AddOns)
     @get:JsonProperty
     var name : String by AddOns.name
     @get:JsonProperty
     var product : Product? by Product optionalReferencedOn AddOns.product
     @get:JsonProperty
-    val addOnId by IDDelegateOn(this)
+    val addOnId by PK
 }
 
-class Discount(id: EntityID<Int>) : IntEntity(id) {
+class Discount(id: EntityID<Int>) : RelationalEntity(id) {
     companion object : IntEntityClass<Discount>(Discounts)
     @get:JsonProperty
     var name : String by Discounts.name
     @get:JsonProperty
     var description : String by Discounts.description
     @get:JsonProperty
-    val discountId : Int by IDDelegateOn(this) //Discounts.id
+    val discountId : Int by PK
 }
 
 interface DiscountAdjustment<SubjectType : IntEntity> {

@@ -1,8 +1,5 @@
 package ticketpile.service.database
 
-import org.jetbrains.exposed.dao.*
-import org.jetbrains.exposed.sql.*
-
 
 /**
  * JetBrains Exposed DAO structure for TicketPile.
@@ -10,41 +7,45 @@ import org.jetbrains.exposed.sql.*
  * Created by jonlatane on 8/26/16.
  */
 // Primary entities
-object Bookings : RelatableTable("booking") {
+object Bookings : RelationalTable("booking") {
     val code = varchar("name", length = 128).index(isUnique = true)
 }
 
-object Events : RelatableTable("event") {
+object Events : RelationalTable("event") {
     val capacity = integer("capacity")
     val startTime = datetime("startTime")
     val endTime = datetime("endTime")
     val product = reference("product", Products)
 }
 
-object Tickets : RelatableTable("ticket") {
-    val personCategory = reference("personCategory", PersonCategories)
-    val basePrice = decimal("baseprice", precision = 65, scale = 30)
+object BookingItems : RelationalTable("bookingItem") {
     val event = reference("event", Events)
     val booking = reference("booking", Bookings)
 }
 
+object Tickets : ReferenceTable("tickets", BookingItems) {
+    val personCategory = reference("personCategory", PersonCategories)
+    val basePrice = decimal("baseprice", precision = 65, scale = 30)
+    val code = varchar("code", length = 128)
+}
+
 // Other things tracked by ID
-object PersonCategories : RelatableTable("personCategory") {
+object PersonCategories : RelationalTable("personCategory") {
     val name = varchar("name", length = 128)
     val description = varchar("description", length = 1024)
 }
 
-object Products : RelatableTable("product") {
+object Products : RelationalTable("product") {
     val name = varchar("name", length = 128)
     val description = varchar("description", length = 1024)
 }
 
-object AddOns : RelatableTable("addon") {
+object AddOns : RelationalTable("addon") {
     val name = varchar("name", length = 128)
     val product = reference("product", Products).nullable()
 }
 
-object Discounts : RelatableTable("discount") {
+object Discounts : RelationalTable("discount") {
     val name = varchar("name", length = 128)
     val description = varchar("description", length = 1024)
     //val percentOff = decimal("percentOff", precision = 16, scale = 16).nullable()
@@ -52,17 +53,15 @@ object Discounts : RelatableTable("discount") {
 }
 
 //Adjustments allowed by data model
-object BookingAddOns : AddOnTable(Bookings)
-object BookingDiscounts : DiscountTable(Bookings)
-object BookingManualAdjustments : ManualAdjustmentTable(Bookings) 
+object BookingAddOns : AddOnTable("bookingAddOn", Bookings)
+object BookingDiscounts : DiscountTable("bookingDiscount", Bookings)
+object BookingManualAdjustments : ManualAdjustmentTable("bookingManualAdjustment", Bookings) 
 
 //Event Adjustments relate to an Event and a Booking
 //and affect pricing of all Tickets on an Event.
-object EventAddOns : AddOnTable(Events) {
-    val booking = reference("booking", Bookings)
-}
+object BookingItemAddOns : AddOnTable("bookingItemAddOns", BookingItems)
 
 // Things not supported by ZOZI
-object TicketAddOns : AddOnTable(Tickets)
-object TicketDiscounts : DiscountTable(Tickets)
-object TicketManualAdjustments : ManualAdjustmentTable(Tickets)
+object TicketAddOns : AddOnTable("ticketAddOn", Tickets)
+object TicketDiscounts : DiscountTable("ticketDiscount", Tickets)
+object TicketManualAdjustments : ManualAdjustmentTable("ticketManualAdjustment", Tickets)

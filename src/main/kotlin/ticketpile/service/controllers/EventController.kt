@@ -5,15 +5,14 @@ import org.joda.time.DateTime
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
-import ticketpile.service.model.Booking
+import ticketpile.service.controllers.AdjustmentController
 import ticketpile.service.model.Event
 import ticketpile.service.model.Product
-import java.util.*
-import java.util.concurrent.atomic.AtomicLong
 
 @RestController
-class EventController {
-    @PostMapping(value = "/event",
+@RequestMapping(value = "/event")
+class EventController() : AdjustmentController<Event>(Event) {
+    @PostMapping(
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
     fun createEvent(
@@ -41,7 +40,7 @@ class EventController {
         return event!!
     }
 
-    @GetMapping(value = "/event/all",
+    @GetMapping(value = "/all",
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
     fun allEvents() : Iterable<Event> {
@@ -51,4 +50,31 @@ class EventController {
         }
         return allEvents
     }
+
+    /*
+    @PostMapping(value = "/{eventId}/addOn/ ")
+    override fun applyEventAddOn(
+            @RequestParam(value = "bookingId", required = true)
+            bookingId: Int,
+            @PathVariable(value = "eventId")
+            eventId: Int,
+            @RequestParam(value = "addOnId", required = true)
+            addOnId: Int,
+            @RequestParam(value = "addOnAmount", required = true)
+            addOnAmount: BigDecimal
+    ): EventAddOn {
+        return super.applyEventAddOn(bookingId,  eventId, addOnId, addOnAmount)
+    }
+
+    @DeleteMapping(value = "/{eventId}/addon/{bookingAddOnId}")
+    override fun deleteEventAddOn(
+            @RequestParam(value = "bookingId", required = false)
+            bookingId: Int?,
+            @PathVariable(value = "eventId")
+            eventId: Int?,
+            @RequestParam(value = "addOnId", required = true)
+            eventAddOnId: Int
+    ): BookingEvent? {
+        return deleteEventAddOn(bookingId, eventId, eventAddOnId)
+    }*/
 }

@@ -1,7 +1,8 @@
 package ticketpile.service.database
 
+import org.jetbrains.exposed.dao.IntEntity
+import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
-import org.jetbrains.exposed.sql.Table
 
 /**
  * The base ways we can affect the price of Tickets, Events
@@ -9,27 +10,32 @@ import org.jetbrains.exposed.sql.Table
  * Created by jonlatane on 8/28/16.
  */
 
+private class RelationalEntityClass<EntityType : IntEntity>(table: IntIdTable) : IntEntityClass<EntityType>(table)
 
-open class RelatableTable(val singularName : String) : IntIdTable() {
+open class RelationalTable(val singularName : String) : IntIdTable() {
+    var externalSource = varchar(name="externalHost", length = 128).nullable().index()
+    var externalId = integer("externalId").nullable().index()
+    
+    fun <EntityType : IntEntity> companion() : IntEntityClass<EntityType> = RelationalEntityClass(this)
 }
 
 // To be used for things that don't affect price
-open class ReferenceTable(subject : RelatableTable) : IntIdTable() {
+open class ReferenceTable(singularName: String, subject : RelationalTable) : RelationalTable(singularName) {
     val parent = reference(subject.singularName, subject)
 }
 
-open class AdjustmentTable(subject : RelatableTable) : ReferenceTable(subject) {
+open class AdjustmentTable(singularName: String, subject : RelationalTable) : ReferenceTable(singularName, subject) {
     val amount = decimal("amount", precision = 65, scale = 30)
 }
 
-open class DiscountTable(subject : RelatableTable) : AdjustmentTable(subject) {
+open class DiscountTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {
     val discount = reference("discount", Discounts)
 }
 
-open class ManualAdjustmentTable(subject : RelatableTable) : AdjustmentTable(subject) {
+open class ManualAdjustmentTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {
     val description = varchar("description", length = 512)
 }
 
-open class AddOnTable(subject : RelatableTable) : AdjustmentTable(subject) {
+open class AddOnTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {
     val addon = reference("addon", AddOns)
 }
