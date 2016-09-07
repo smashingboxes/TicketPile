@@ -1,68 +1,68 @@
-package ticketpile.service.webreserv
+package ticketpile.service.advance
 
 import org.joda.time.DateTime
 import java.io.Serializable
 import java.math.BigDecimal
 
 /**
- * Input POJO type for WebReserv API20 /bookings/{bookingId} requests.
+ * Input POJO types for Advance API20 requests.
  * 
  * Created by jonlatane on 8/28/16.
  */
-class WRReservationResponse() : Serializable {    
-    var booking : WebReservation = WebReservation()
+class AdvanceReservationResponse() : Serializable {    
+    var booking : AdvanceReservation = AdvanceReservation()
 }
 
-class WebReservation() {    
-    var addonSelections = emptyList<WRAddOnSelection>()    
+class AdvanceReservation() {    
+    var addonSelections = emptyList<AdvanceAddOnSelection>()    
     var agentCode : String? = null    
     var bookingCode = ""    
     var bookingDateTime = DateTime.now()    
     var bookingID  = -1    
-    var bookingItems = emptyList<WRBookingItem>()         
+    var bookingItems = emptyList<AdvanceBookingItem>()         
     var bookingStatus = ""
     var channelCode = ""    
 	var currencyCode = ""    
-	var customer = WRCustomer()    
-	var lineTotals = emptyList<WRLineTotal>()    
+	var customer = AdvanceCustomer()    
+	var lineTotals = emptyList<AdvanceLineTotal>()    
 	var merchantID = -1    
 	var officeNotes = ""    
 	var orderTakerID = -1    
-	var payments = emptyList<WRPayment>()    
-	var pricing = WRPricing()    
+	var payments = emptyList<AdvancePayment>()    
+	var pricing = AdvancePricing()    
 	var promotionVoucherCodes = ""    
-	var salesChannel = WRSalesChannel()    
+	var salesChannel = AdvanceSalesChannel()    
 	var status = ""    
 	var taxExempt = false    
 	var termsAndConditions1Agreed = false    
 	var uuid = ""
 }
 
-class WRAddOnSelection() {
+class AdvanceAddOnSelection() {
     var addonId = -1
 	var name = ""
 }
 
-class WRBookingItem() {
+class AdvanceBookingItem() {
     var availabilityID = -1
     var bookingItemID = -1
     var noPersons = emptyList<Int>()
     var productId = -1
-	var addonSelections = emptyList<WRAddOnSelection>()
-    var ticketCodes = emptyList<WRTicketCode>()
-    var lineTotals = emptyList<WRLineTotal>()
+	var addonSelections = emptyList<AdvanceAddOnSelection>()
+    var ticketCodes = emptyList<AdvanceTicketCode>()
+    var lineTotals = emptyList<AdvanceLineTotal>()
 	var startDateTime = DateTime.now()
 	var endDateTime = DateTime.now()
 }
 
-class WRTicketCode() {
+class AdvanceTicketCode() {
     var ticketCodeID = -1
     var code = ""
     var status = ""
     var personCategoryIndex = -1
 }
 
-class WRLineTotal() {
+class AdvanceLineTotal() {
     var addonID : Int? = null
     var type = -1
     var label = ""
@@ -71,28 +71,28 @@ class WRLineTotal() {
     var unitPrice : BigDecimal? = null
 }
 
-class WRCustomer() {
+class AdvanceCustomer() {
     
 }
 
-class WRPayment() {
+class AdvancePayment() {
     
 }
 
-class WRPricing() {
+class AdvancePricing() {
     
 }
 
-class WRSalesChannel() {
+class AdvanceSalesChannel() {
     
 }
 
 //Ex: from http://galaxy-elbert.zozi.com/services/api20/merchants/34100/calendars/54715823
-class WRAvailabilityResponse() {
-    var calendarEntry = WRAvailability()
+class AdvanceAvailabilityResponse() {
+    var calendarEntry = AdvanceAvailability()
 }
 
-class WRAvailability() {
+class AdvanceAvailability() {
     var availabilityID = -1
     var maxCapacity = -1
     var startDateTime = DateTime.now()
@@ -101,21 +101,21 @@ class WRAvailability() {
 }
 
 //Person Categories
-class WRPersonCategoryResponse() {
-    var personCategories = emptyList<WRPersonCategory>()
+class AdvancePersonCategoryResponse() {
+    var personCategories = emptyList<AdvancePersonCategory>()
 }
 
-class WRPersonCategory() {
+class AdvancePersonCategory() {
     var personCategoryIndex = -1
     var label : String? = ""
     var categoryDescription = ""
 }
 
-class WRProductsReponse() {
-    var products = emptyList<WRProduct>()
+class AdvanceProductsReponse() {
+    var products = emptyList<AdvanceProduct>()
 }
 
-class WRProduct() {
+class AdvanceProduct() {
     var productID = -1
     var name = ""
     var shortDescription = ""

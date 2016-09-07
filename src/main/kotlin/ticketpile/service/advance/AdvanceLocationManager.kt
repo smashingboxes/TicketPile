@@ -1,4 +1,4 @@
-package ticketpile.service.webreserv
+package ticketpile.service.advance
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -18,7 +18,7 @@ import java.sql.Connection
  * 
  * Created by jonlatane on 9/3/16.
  */
-class WRLocationManager {
+class AdvanceLocationManager {
     companion object {
         private val restTemplate = RestTemplate()
     }
@@ -40,7 +40,7 @@ class WRLocationManager {
     ): Booking {
         val reservation = api20Request(
                 "/bookings/$reservationId",
-                WRReservationResponse::class.java).booking
+                AdvanceReservationResponse::class.java).booking
         println(reservation.bookingCode)
 
         var result: Booking? = null
@@ -65,9 +65,9 @@ class WRLocationManager {
     private fun importPersonCategories() {
         val personCategoryResponse = api20Request(
                 "/personcategories?merchantID=$locationId",
-                WRPersonCategoryResponse::class.java)
+                AdvancePersonCategoryResponse::class.java)
         personCategoryResponse.personCategories.forEach {
-            wrPersonCategory: WRPersonCategory ->
+            wrPersonCategory: AdvancePersonCategory ->
             val externalPCId = (10 * locationId) + wrPersonCategory.personCategoryIndex
             val personCategory = PersonCategory.find {
                 (PersonCategories.externalSource eq source) and
@@ -87,15 +87,15 @@ class WRLocationManager {
     private fun importProducts() {
         val productsResponse = api20Request(
                 "/merchants/$locationId/products?merchantID=$locationId",
-                WRProductsReponse::class.java)
+                AdvanceProductsReponse::class.java)
         productsResponse.products.forEach {
-            wrProduct: WRProduct ->
+            wrProduct: AdvanceProduct ->
             importProduct(wrProduct)
         }
     }
 
     private fun importProduct(
-            wrProduct: WRProduct
+            wrProduct: AdvanceProduct
     ) {
         println("WebReserv ProductID: ${wrProduct.productID}")
         val product = Product.find {
@@ -114,10 +114,10 @@ class WRLocationManager {
 
     private fun importBookingItems(
             targetBooking: Booking,
-            reservation: WebReservation
+            reservation: AdvanceReservation
     ) {
         reservation.bookingItems.forEach {
-            wrBookingItem: WRBookingItem ->
+            wrBookingItem: AdvanceBookingItem ->
             val targetEvent = importAvailability(wrBookingItem.availabilityID)
             val bookingItem = BookingItem.find {
                 (BookingItems.externalSource eq source) and
@@ -131,7 +131,7 @@ class WRLocationManager {
     }
     
     private fun importTickets(
-            wrBookingItem: WRBookingItem,
+            wrBookingItem: AdvanceBookingItem,
             targetBookingItem: BookingItem
     ) {
         val personCategoryTicketPrices = mutableMapOf<PersonCategory, BigDecimal>()
@@ -168,7 +168,7 @@ class WRLocationManager {
     ): Event {
         val availability = api20Request(
                 "/merchants/$locationId/calendars/$availabilityId",
-                WRAvailabilityResponse::class.java).calendarEntry
+                AdvanceAvailabilityResponse::class.java).calendarEntry
         println("Event product ID: ${availability.productID}")
         val eventProduct = products[availability.productID]!!
         val event = Event.find {

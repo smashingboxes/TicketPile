@@ -1,4 +1,4 @@
-package ticketpile.service.webreserv
+package ticketpile.service.advance
 
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -7,16 +7,16 @@ import org.springframework.web.bind.annotation.RestController
 import ticketpile.service.model.Booking
 
 /**
- * Controller capable of receiving WebReserv reservations and dumping
+ * Controller capable of receiving Advance reservations and dumping
  * their data into TicketPile.
  * Created by jonlatane on 8/27/16.
  */
 @RestController
-@RequestMapping(value = "/webreserv")
-open class WebReservationController {
+@RequestMapping(value = "/advance")
+open class AdvanceReservationController {
     @PostMapping(value = "/requestImport")
     fun requestImport(
-            @RequestParam(value = "webreservHost", required = true)
+            @RequestParam(value = "advanceHost", required = true)
             host: String,
             @RequestParam(value = "authKey", required = true)
             authorizationKey: String,
@@ -25,7 +25,7 @@ open class WebReservationController {
             @RequestParam(value = "reservationId", required = true)
             reservationId: Int
     ): Booking {
-        return WRLocationManager(host, authorizationKey, locationId)
+        return AdvanceLocationManager(host, authorizationKey, locationId)
                 .importReservation(reservationId)
     }
 }
