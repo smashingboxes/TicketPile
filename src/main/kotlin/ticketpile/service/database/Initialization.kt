@@ -17,10 +17,14 @@ internal val tables = arrayOf(
         BookingAddOns,
         BookingDiscounts,
         BookingManualAdjustments,
-        TicketAddOns,
-        TicketDiscounts,
-        TicketManualAdjustments,
-        BookingItemAddOns
+        //TicketAddOns,
+        //TicketDiscounts,
+        //TicketManualAdjustments,
+        BookingItemAddOns,
+        TicketBookingAddOns,
+        TicketBookingDiscounts,
+        TicketBookingManualAdjustments,
+        TicketBookingItemAddOns
 )
 
 fun initializeDB() {

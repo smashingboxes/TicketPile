@@ -6,13 +6,12 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializationConfig
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.sql.StdOutSqlLogger
+import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.springframework.context.annotation.Bean
 import java.sql.Connection
 
 /**
@@ -29,12 +28,10 @@ class TransactionSerializer(val serializer : JsonSerializer<Any>) : JsonSerializ
             jsonGenerator : JsonGenerator,
             serializerProvider : SerializerProvider){
         if(o is Entity<*> && TransactionManager.currentOrNull() == null) {
-            transaction(transactionIsolation = Connection.TRANSACTION_READ_COMMITTED, 
-                    repetitionAttempts = 1,
-                    statement = {
-                        logger.addLogger(StdOutSqlLogger())
-                        serializer.serialize(o, jsonGenerator, serializerProvider)
-                    })
+            transaction {
+                logger.addLogger(StdOutSqlLogger())
+                serializer.serialize(o, jsonGenerator, serializerProvider)
+            }
         } else {
             serializer.serialize(o, jsonGenerator, serializerProvider)
         }
@@ -49,3 +46,15 @@ class TransactionSerializerModifier : BeanSerializerModifier() {
         return TransactionSerializer(jsonSerializer as JsonSerializer<Any>)
     }
 }
+
+class EntityIDSerializer() : StdSerializer<EntityID<*>>(null as Class<EntityID<*>>?) {
+    override fun serialize(value: EntityID<*>?, gen: JsonGenerator?, provider: SerializerProvider?) {
+        if(value?.value is Int)
+            gen?.writeNumber(value?.value as Int)
+        else
+            gen?.writeString(value?.value.toString())
+    }
+}
+
+var defaultIsolationLevel = Connection.TRANSACTION_REPEATABLE_READ
+fun <T> transaction(statement: Transaction.() -> T): T = org.jetbrains.exposed.sql.transactions.transaction(defaultIsolationLevel, 1, statement)

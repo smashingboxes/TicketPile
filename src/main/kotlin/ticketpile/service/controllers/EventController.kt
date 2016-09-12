@@ -1,6 +1,6 @@
 package ticketpile.service
 
-import org.jetbrains.exposed.sql.transactions.transaction
+import ticketpile.service.util.transaction
 import org.joda.time.DateTime
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType

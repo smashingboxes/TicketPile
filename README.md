@@ -8,5 +8,5 @@ To run and access the Swagger API:
 
 ```
 $ ./gradlew run
-$ open http://localhost:8080/swagger-ui.html
+$ open https://localhost:8443/swagger-ui.html
 ```

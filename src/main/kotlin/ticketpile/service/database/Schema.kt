@@ -62,6 +62,22 @@ object BookingManualAdjustments : ManualAdjustmentTable("bookingManualAdjustment
 object BookingItemAddOns : AddOnTable("bookingItemAddOns", BookingItems)
 
 // Things not supported by ZOZI
-object TicketAddOns : AddOnTable("ticketAddOn", Tickets)
-object TicketDiscounts : DiscountTable("ticketDiscount", Tickets)
-object TicketManualAdjustments : ManualAdjustmentTable("ticketManualAdjustment", Tickets)
+//object TicketAddOns : AddOnTable("ticketAddOn", Tickets)
+//object TicketDiscounts : DiscountTable("ticketDiscount", Tickets)
+//object TicketManualAdjustments : ManualAdjustmentTable("ticketManualAdjustment", Tickets)
+
+// Mappings of Booking/BookingItem adjustment amounts to Tickets
+// Allows us to define programmatically how ticket prices are affected
+// by addons and discounts
+object TicketBookingAddOns : AddOnTable("ticketBookingAddOn", Tickets) {
+    val bookingAddOn = reference("bookingAddOn", BookingAddOns)
+}
+object TicketBookingDiscounts : DiscountTable("ticketBookingDiscount", Tickets) {
+    val bookingDiscounts = reference("bookingDiscount", BookingDiscounts)
+}
+object TicketBookingManualAdjustments : ManualAdjustmentTable("ticketBookingManualAdjustment", Tickets) {
+    val bookingAddOn = reference("bookingAddOn", BookingAddOns)
+}
+object TicketBookingItemAddOns : AddOnTable("ticketBookingItemAddOn", Tickets) {
+    val bookingAddOn = reference("bookingItemAddOn", BookingItemAddOns)
+}

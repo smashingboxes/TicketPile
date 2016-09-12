@@ -22,22 +22,18 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings) {
     @get:JsonProperty 
     var code by Bookings.code
     
-    /*@get:JsonProperty 
-    val events : Iterable<BookingEvent> by lazy {
-        tickets.groupBy({ it.event }).map {
-            it -> BookingEvent(event = it.key, booking = this)
-        }
-    }*/
-    
     @get:JsonProperty
-    val items : Iterable<BookingItem> by children(BookingItem, BookingItems.booking)
+    val items : Iterable<BookingItem> 
+            by children(BookingItem, BookingItems.booking)
     
     @get:JsonProperty
     val addOns : Iterable<BookingAddOn> 
             by children(BookingAddOn)
+    
     @get:JsonProperty
     val discounts : Iterable<BookingDiscount> 
             by children(BookingDiscount)
+    
     @get:JsonProperty
     val manualAdjustments : Iterable<BookingManualAdjustment> 
             by children(BookingManualAdjustment)

@@ -41,7 +41,7 @@ abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {
     }
 
     class Children<Type : IntEntity>(val parentObject: IntEntity, val childClass: IntEntityClass<Type>, val childColumn: Column<EntityID<Int>>) {
-        operator fun getValue(thisRef: IntEntity, property: KProperty<*>): Iterable<Type> {
+        operator fun getValue(thisRef: IntEntity, property: KProperty<*>): List<Type> {
             return childClass.find { childColumn eq parentObject.id }.map { it -> it }
         }
 

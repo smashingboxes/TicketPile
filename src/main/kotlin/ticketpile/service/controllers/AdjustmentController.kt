@@ -3,7 +3,7 @@ package ticketpile.service.controllers
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.sql.StdOutSqlLogger
-import org.jetbrains.exposed.sql.transactions.transaction
+import ticketpile.service.util.transaction
 import ticketpile.service.model.*
 import ticketpile.service.util.BadRequestException
 import ticketpile.service.util.ResourceNotFoundException

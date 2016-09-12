@@ -1,11 +1,11 @@
 package ticketpile.service.controllers;
 
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import ticketpile.service.model.Booking
 import ticketpile.service.model.BookingAddOn
 import ticketpile.service.model.BookingDiscount
+import ticketpile.service.util.transaction
 import java.math.BigDecimal
 import java.util.*
 

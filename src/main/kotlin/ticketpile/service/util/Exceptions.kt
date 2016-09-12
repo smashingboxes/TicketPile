@@ -17,3 +17,8 @@ class ResourceNotFoundException(s:String) : RuntimeException(s) {
 class BadRequestException(s:String) : RuntimeException(s) {
 
 }
+
+@ResponseStatus(value = HttpStatus.UNAUTHORIZED)
+class AuthenticationException(s:String) : RuntimeException(s) {
+    
+}

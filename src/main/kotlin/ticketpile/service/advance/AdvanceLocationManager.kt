@@ -1,17 +1,16 @@
 package ticketpile.service.advance
 
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.RestTemplate
 import ticketpile.service.database.*
 import ticketpile.service.model.*
+import ticketpile.service.util.transaction
 import java.math.BigDecimal
 import java.net.URI
 import java.net.URL
-import java.sql.Connection
 
 /**
  * Handles per-location imports of WebReserv bookings.
@@ -44,7 +43,7 @@ class AdvanceLocationManager {
         println(reservation.bookingCode)
 
         var result: Booking? = null
-        transaction(Connection.TRANSACTION_READ_UNCOMMITTED, 1, {
+        transaction {
             importProducts()
             importPersonCategories()
             val booking = Booking.find {
@@ -58,7 +57,7 @@ class AdvanceLocationManager {
 
             importBookingItems(booking, reservation)
             result = booking
-        })
+        }
         return result!!
     }
 
