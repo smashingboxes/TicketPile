@@ -1,4 +1,4 @@
-package ticketpile.service.security
+package ticketpile.service.springconfig
 
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AbstractAuthenticationToken
@@ -13,6 +13,9 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter
 import org.springframework.web.filter.OncePerRequestFilter
+import ticketpile.service.security.AuthKey
+import ticketpile.service.security.AuthKeys
+import ticketpile.service.security.User
 import ticketpile.service.util.transaction
 import javax.servlet.FilterChain
 import javax.servlet.http.HttpServletRequest
@@ -65,8 +68,8 @@ open class WebSecurityConfig : WebSecurityConfigurerAdapter() {
 
 class BearerTokenFilter() : OncePerRequestFilter() {
     override fun doFilterInternal(
-            request: HttpServletRequest?, 
-            response: HttpServletResponse?, 
+            request: HttpServletRequest?,
+            response: HttpServletResponse?,
             filterChain: FilterChain?
     ) {
         val bearer : String = request?.getHeader("Bearer") ?: ""

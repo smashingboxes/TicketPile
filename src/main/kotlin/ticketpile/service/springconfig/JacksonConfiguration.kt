@@ -1,4 +1,4 @@
-package ticketpile.service
+package ticketpile.service.springconfig
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.MapperFeature
@@ -34,7 +34,7 @@ open class JacksonConfiguration {
         mapper.registerModule(module)
         
         mapper.registerModule(JodaModule())
-        mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS , false)
+        mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
 
         return mapper
     }

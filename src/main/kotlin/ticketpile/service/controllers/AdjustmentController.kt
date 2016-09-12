@@ -3,10 +3,10 @@ package ticketpile.service.controllers
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.sql.StdOutSqlLogger
-import ticketpile.service.util.transaction
 import ticketpile.service.model.*
 import ticketpile.service.util.BadRequestException
 import ticketpile.service.util.ResourceNotFoundException
+import ticketpile.service.util.transaction
 import java.math.BigDecimal
 
 /**
@@ -135,44 +135,4 @@ open abstract class AdjustmentController<SubjectType: IntEntity> (
         }
         return subject!!
     }
-
-    /*open internal fun applyEventAddOn(
-            bookingId: Int,
-            eventId: Int,
-            addOnId: Int,
-            addOnAmount: BigDecimal
-    ): EventAddOn {
-        var eventAddOn : EventAddOn? = null
-        transaction {
-            logger.addLogger(StdOutSqlLogger())
-            eventAddOn = EventAddOn.new {
-                booking = Booking.findById(bookingId)!!
-                event = Event.findById(eventId)!!
-                addOn = AddOn.findById(addOnId)!!
-                amount = addOnAmount
-            }
-        }
-        return eventAddOn!!
-    }
-
-    open internal fun deleteEventAddOn(
-            bookingId: Int?,
-            eventId: Int?,
-            eventAddOnId: Int
-    ): BookingEvent? {
-        var bookingEvent: BookingEvent? = null
-        transaction {
-            val adjustment = EventAddOn.findById(eventAddOnId)
-                    ?: throw ResourceNotFoundException("Addon not found")
-            if(adjustment.booking.bookingId == bookingId
-                    || adjustment.event.eventId == eventId) {
-                adjustment.delete()
-                bookingEvent = Booking.findById(adjustment.booking.id.value)!!
-                        .events.filter {
-                    it.event.eventId == adjustment.event.eventId
-                }.first()
-            } else throw BadRequestException("Booking or Event ID must match!")
-        }
-        return bookingEvent
-    }*/
 }

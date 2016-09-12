@@ -1,20 +1,21 @@
 package ticketpile.service.controllers;
 
 import org.springframework.http.MediaType
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 import ticketpile.service.model.Booking
-import ticketpile.service.model.BookingAddOn
-import ticketpile.service.model.BookingDiscount
 import ticketpile.service.util.transaction
-import java.math.BigDecimal
-import java.util.*
 
 /**
+ * Controller for managing Bookings.
+ * 
  * Created by jonlatane on 8/28/16.
  */
 @RestController
 @RequestMapping(value = "/booking")
 class BookingController : AdjustmentController<Booking>(Booking) {
+    /*
     @PostMapping(
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
@@ -36,6 +37,7 @@ class BookingController : AdjustmentController<Booking>(Booking) {
         }
         return booking!!
     }
+    */
 
     @GetMapping(
             value = "/all",
@@ -49,7 +51,7 @@ class BookingController : AdjustmentController<Booking>(Booking) {
         return allBookings
     }
 
-
+    /*
     @PostMapping(value = "/{bookingId}/discount")
     fun applyDiscount(
             @PathVariable("bookingId")
@@ -111,4 +113,5 @@ class BookingController : AdjustmentController<Booking>(Booking) {
                 adjustmentClass = BookingAddOn
         )
     }
+    */
 }

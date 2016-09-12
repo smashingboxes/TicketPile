@@ -35,9 +35,9 @@ open class TicketPile {
             defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE*/
             Database.connect(
                     url="jdbc:mysql://127.0.0.1/ticketpile?socketTimeout=60000", 
-                    driver = "com.mysql.jdbc.Driver",
-                    user = "root", 
-                    password = "password"
+                    driver="com.mysql.jdbc.Driver",
+                    user="root", 
+                    password="password"
             )
             transaction {
                 logger.addLogger(StdOutSqlLogger())
@@ -54,7 +54,7 @@ open class TicketPile {
                 .apiInfo(ApiInfoBuilder()
                 .title("TicketPile API")
                 .description("TicketPile is an ETL layer that transforms " +
-                        "JSON data from the Advance API into a normalized " +
+                        "JSON data from the Advance API into a normalized relational DB" +
                         "format that can be easily imported into Sisense " +
                         "or other BI tools.")
                 .version("0.1")
@@ -85,3 +85,29 @@ open class TicketPile {
         )
     }
 }
+/*
+@Configuration
+@PropertySource("classpath:/db.properties")
+open class DBConfig() {
+    @Autowired
+    var data : Environment? = null
+
+    @Bean
+    open fun connect() {
+        val env = data!!
+        Database.connect(
+                url=env.getProperty("db.url"),
+                driver = env.getProperty("db.driver"),
+                user = env.getProperty("db.user"),
+                password = env.getProperty("db.password")
+        )
+    }
+    
+    companion object {
+        @JvmStatic
+        @Bean
+        open fun placeHolderConfigurer(): PropertySourcesPlaceholderConfigurer {
+            return PropertySourcesPlaceholderConfigurer()
+        }
+    }
+}*/

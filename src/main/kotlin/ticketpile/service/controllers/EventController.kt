@@ -1,17 +1,17 @@
 package ticketpile.service
 
-import ticketpile.service.util.transaction
-import org.joda.time.DateTime
-import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.MediaType
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 import ticketpile.service.controllers.AdjustmentController
 import ticketpile.service.model.Event
-import ticketpile.service.model.Product
+import ticketpile.service.util.transaction
 
 @RestController
 @RequestMapping(value = "/event")
 class EventController() : AdjustmentController<Event>(Event) {
+    /*
     @PostMapping(
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
@@ -39,7 +39,7 @@ class EventController() : AdjustmentController<Event>(Event) {
         }
         return event!!
     }
-
+    */
     @GetMapping(value = "/all",
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
@@ -50,31 +50,4 @@ class EventController() : AdjustmentController<Event>(Event) {
         }
         return allEvents
     }
-
-    /*
-    @PostMapping(value = "/{eventId}/addOn/ ")
-    override fun applyEventAddOn(
-            @RequestParam(value = "bookingId", required = true)
-            bookingId: Int,
-            @PathVariable(value = "eventId")
-            eventId: Int,
-            @RequestParam(value = "addOnId", required = true)
-            addOnId: Int,
-            @RequestParam(value = "addOnAmount", required = true)
-            addOnAmount: BigDecimal
-    ): EventAddOn {
-        return super.applyEventAddOn(bookingId,  eventId, addOnId, addOnAmount)
-    }
-
-    @DeleteMapping(value = "/{eventId}/addon/{bookingAddOnId}")
-    override fun deleteEventAddOn(
-            @RequestParam(value = "bookingId", required = false)
-            bookingId: Int?,
-            @PathVariable(value = "eventId")
-            eventId: Int?,
-            @RequestParam(value = "addOnId", required = true)
-            eventAddOnId: Int
-    ): BookingEvent? {
-        return deleteEventAddOn(bookingId, eventId, eventAddOnId)
-    }*/
 }
