@@ -17,7 +17,7 @@ connect to.
 To run and access the Swagger API:
 
 ```
-$ ./gradlew run && open https://localhost:8443/swagger-ui.html
+$ ./gradlew run & open https://localhost:8443/swagger-ui.html
 ```
 
 Gradle will download dependencies and run the application.  It will
