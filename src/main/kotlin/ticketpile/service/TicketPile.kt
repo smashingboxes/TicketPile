@@ -2,10 +2,16 @@ package ticketpile.service
 
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.StdOutSqlLogger
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.PropertySource
+import org.springframework.stereotype.Component
 import springfox.documentation.builders.ApiInfoBuilder
 import springfox.documentation.builders.PathSelectors
 import springfox.documentation.service.ApiKey
@@ -23,27 +29,10 @@ import ticketpile.service.util.transaction
 
 @SpringBootApplication(exclude = arrayOf( SecurityAutoConfiguration::class ))
 @EnableSwagger2
+@EnableConfigurationProperties
 open class TicketPile {
     companion object {
         @JvmStatic fun main(args: Array<String>) {
-            //H2 gets weird with how Clob datatypes are read by the Exposed library
-            //Database.connect("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;MODE=MySQL", driver = "org.h2.Driver")
-            /*Database.connect(
-                    url="jdbc:sqlite::memory:",
-                    driver = "org.sqlite.JDBC"
-            )
-            defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE*/
-            Database.connect(
-                    url="jdbc:mysql://127.0.0.1/ticketpile?socketTimeout=60000", 
-                    driver="com.mysql.jdbc.Driver",
-                    user="root", 
-                    password="password"
-            )
-            transaction {
-                logger.addLogger(StdOutSqlLogger())
-                initializeDB()
-                initializeSecurity()
-            }
             SpringApplication.run(TicketPile::class.java, *args)
         }
     }
@@ -85,29 +74,39 @@ open class TicketPile {
         )
     }
 }
-/*
-@Configuration
-@PropertySource("classpath:/db.properties")
-open class DBConfig() {
-    @Autowired
-    var data : Environment? = null
 
-    @Bean
-    open fun connect() {
-        val env = data!!
-        Database.connect(
-                url=env.getProperty("db.url"),
-                driver = env.getProperty("db.driver"),
-                user = env.getProperty("db.user"),
-                password = env.getProperty("db.password")
-        )
-    }
+
+@Component
+open class DBConnection() : CommandLineRunner {
+    @Autowired
+    var config = DBConfig()
     
-    companion object {
-        @JvmStatic
-        @Bean
-        open fun placeHolderConfigurer(): PropertySourcesPlaceholderConfigurer {
-            return PropertySourcesPlaceholderConfigurer()
+    override fun run(vararg args : String) {
+        println("Establishing TicketPile Database Connection...")
+        println("DB Server: ${config.url}")
+        println("DB Driver: ${config.driver}")
+        println("DB User: ${config.user}")
+        Database.connect(
+                url=config.url,
+                driver=config.driver,
+                user=config.user,
+                password=config.password
+        )
+        println("Setting up database tables")
+        transaction {
+            logger.addLogger(StdOutSqlLogger())
+            initializeDB()
+            initializeSecurity()
         }
     }
-}*/
+}
+
+@Component
+@PropertySource("classpath:db.properties")
+@ConfigurationProperties(prefix = "db")
+open class DBConfig() {
+    var url = ""
+    var driver = ""
+    var user = ""
+    var password = ""
+}
