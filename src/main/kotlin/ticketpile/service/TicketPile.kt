@@ -43,7 +43,7 @@ open class TicketPile {
                 .apiInfo(ApiInfoBuilder()
                 .title("TicketPile API")
                 .description("TicketPile is an ETL layer that transforms " +
-                        "JSON data from the Advance API into a normalized relational DB" +
+                        "JSON data from the Advance API into a normalized relational DB " +
                         "format that can be easily imported into Sisense " +
                         "or other BI tools.")
                 .version("0.1")
