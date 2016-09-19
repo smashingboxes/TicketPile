@@ -7,7 +7,7 @@ into a highly-normalized database suitable for easy usage in SiSense,
 MS Power BI, or most other BI tools.
 
 #### Database configuration
-Open `db.properties` and update the host to point to your MySQL database
+Open `db.properties` and update the advanceHost to point to your MySQL database
 and your username and pasword.  You may need to `mysql -u root -p` and
 then `create database ticketpile;` so the application has a database to
 connect to.
@@ -17,7 +17,7 @@ connect to.
 To run and access the Swagger API:
 
 ```
-$ ./gradlew run & open https://localhost:8443/swagger-ui.html
+$ ./gradlew run & open https://localhost:9443/swagger-ui.html
 ```
 
 Gradle will download dependencies and run the application.  It will

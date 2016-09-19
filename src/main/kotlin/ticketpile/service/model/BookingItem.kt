@@ -21,6 +21,8 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems) {
     @get:JsonProperty
     val bookingItemId by PK
     @get:JsonProperty
+    val addOns by children(BookingItemAddOn)
+    @get:JsonProperty
     val tickets : Iterable<Ticket> by children(Ticket)
 }
 

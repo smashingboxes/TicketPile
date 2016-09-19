@@ -9,6 +9,8 @@ package ticketpile.service.database
 // Primary entities
 object Bookings : RelationalTable("booking") {
     val code = varchar("name", length = 128).index(isUnique = true)
+    val status = varchar("status", length = 128).index()
+    val customer = reference("customer", Customers)
 }
 
 object Events : RelationalTable("event") {
@@ -31,7 +33,7 @@ object Tickets : ReferenceTable("tickets", BookingItems) {
 
 // Other things tracked by ID
 object PersonCategories : RelationalTable("personCategory") {
-    val name = varchar("name", length = 128)
+    val name = varchar("name", length = 128).index()
     val description = varchar("description", length = 1024)
 }
 
@@ -50,6 +52,16 @@ object Discounts : RelationalTable("discount") {
     val description = varchar("description", length = 1024)
     //val percentOff = decimal("percentOff", precision = 16, scale = 16).nullable()
     //val discountAmount = decimal("discountAmount", precision = 16, scale = 16).nullable()
+}
+
+object Customers : RelationalTable("customer") {
+    val firstName = varchar("firstName", length = 128).nullable()
+    val lastName = varchar("lastName", length = 128).nullable()
+    val emailAddress = varchar("emailAddress", length = 128).nullable()
+    val state = varchar("state", length = 128).nullable()
+    val country = varchar("country", length = 128).nullable()
+    val address1 = varchar("address1", length = 128).nullable()
+    val address2 = varchar("address2", length = 128).nullable()
 }
 
 //Adjustments allowed by data model

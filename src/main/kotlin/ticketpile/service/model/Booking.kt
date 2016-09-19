@@ -23,6 +23,9 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings) {
     var code by Bookings.code
     
     @get:JsonProperty
+    var status by Bookings.status
+    
+    @get:JsonProperty
     val items : Iterable<BookingItem> 
             by children(BookingItem, BookingItems.booking)
     
@@ -37,6 +40,9 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings) {
     @get:JsonProperty
     val manualAdjustments : Iterable<BookingManualAdjustment> 
             by children(BookingManualAdjustment)
+    
+    @get:JsonProperty
+    var customer by Customer referencedOn Bookings.customer
 }
 
 class BookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Booking> {

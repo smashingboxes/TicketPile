@@ -6,6 +6,7 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
+import java.math.BigDecimal
 
 /**
  * Created by jonlatane on 8/28/16.
@@ -22,6 +23,12 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
     var personCategory by PersonCategory referencedOn Tickets.personCategory
     @get:JsonProperty
     var basePrice by Tickets.basePrice
+    @get:JsonProperty
+    val grossRevenue : BigDecimal get() {
+        if(bookingItem.booking.status != "confirmed")
+            return BigDecimal.ZERO
+        return basePrice
+    }
 }
 
 class PersonCategory(id: EntityID<Int>) : PrimaryEntity(id, PersonCategories) {
@@ -60,8 +67,8 @@ class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountA
     override var subject by Ticket referencedOn TicketBookingDiscounts.parent
 }
 
-class TicketManualAdjustment(id: EntityID<Int>) : RelationalEntity(id) {
-    companion object : IntEntityClass<TicketManualAdjustment>(TicketBookingManualAdjustments)
+class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id) {
+    companion object : IntEntityClass<TicketBookingManualAdjustment>(TicketBookingManualAdjustments)
     var ticket by Ticket referencedOn TicketBookingManualAdjustments.parent
 
     @get:JsonProperty

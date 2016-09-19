@@ -1,7 +1,6 @@
 package ticketpile.service.advance
 
 import org.joda.time.DateTime
-import java.io.Serializable
 import java.math.BigDecimal
 
 /**
@@ -9,7 +8,22 @@ import java.math.BigDecimal
  * 
  * Created by jonlatane on 8/28/16.
  */
-class AdvanceReservationResponse() : Serializable {    
+
+class AdvanceModifiedBookingsResponse() {
+    var bookingIds = emptyList<Int>()
+}
+
+class AdvanceReservationListReponse() {
+    var bookings = emptyList<AdvanceReservationListReservation>()
+}
+
+class AdvanceReservationListReservation() {
+    var bookingID = "1" //Set by String because Advance can't produce numbers in JSON
+    val bookingId : Int
+    get() = bookingID.toInt()
+}
+
+class AdvanceReservationResponse() {    
     var booking : AdvanceReservation = AdvanceReservation()
 }
 
@@ -30,7 +44,7 @@ class AdvanceReservation() {
 	var orderTakerID = -1    
 	var payments = emptyList<AdvancePayment>()    
 	var pricing = AdvancePricing()    
-	var promotionVoucherCodes = ""    
+	var promotionVoucherCodes: String? = null
 	var salesChannel = AdvanceSalesChannel()    
 	var status = ""    
 	var taxExempt = false    
@@ -72,7 +86,14 @@ class AdvanceLineTotal() {
 }
 
 class AdvanceCustomer() {
-    
+    var customerID = -1
+    var address1: String? = null
+    var address2: String? = null
+    var emailAddress: String? = null
+    var firstName: String? = null
+    var lastName: String? = null
+    var state: String? = null
+    var country: String? = null
 }
 
 class AdvancePayment() {

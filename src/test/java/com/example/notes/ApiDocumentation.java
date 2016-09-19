@@ -398,7 +398,7 @@ public class ApiDocumentation {
 		}
 
 		private FieldDescriptor withPath(String path) {
-			return fieldWithPath(path).attributes(authKey("constraints").value(StringUtils
+			return fieldWithPath(path).attributes(advanceAuthKey("constraints").value(StringUtils
 					.collectionToDelimitedString(this.constraintDescriptions
 							.descriptionsForProperty(path), ". ")));
 		}

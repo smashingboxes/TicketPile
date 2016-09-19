@@ -1,5 +1,7 @@
 package ticketpile.service.advance
 
+import AdvanceSyncTask
+import AdvanceSyncTaskBooking
 import org.jetbrains.exposed.sql.and
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -9,6 +11,7 @@ import ticketpile.service.database.*
 import ticketpile.service.model.*
 import ticketpile.service.util.transaction
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.net.URI
 import java.net.URL
 
@@ -31,34 +34,101 @@ class AdvanceLocationManager {
     private val source: String
     private val authKey: String
     private val locationId: Int
-    private val personCategories = mutableMapOf<Int, PersonCategory>()
-    private val products = mutableMapOf<Int, Product>()
+    //private val personCategories = mutableMapOf<Int, PersonCategory>()
+    //private val products = mutableMapOf<Int, Product>()
+    
+    fun queueAllBookingsForImport() : AdvanceSyncTask {
+        val bookings = api20Request(
+                "/bookings/modified",//?nolines=${Int.MAX_VALUE}",
+                AdvanceModifiedBookingsResponse::class.java
+        ).bookingIds
 
-    fun importReservation(
+        return transaction {
+            importProducts()
+            importPersonCategories()
+            val importTask = AdvanceSyncTask.new { 
+                advanceHost = source
+                advanceAuthKey = authKey
+                advanceLocationId = locationId
+            }
+            for(bookingId in bookings) {
+                AdvanceSyncTaskBooking.new {
+                    reservationId = bookingId
+                    task = importTask
+                }
+            }
+            importTask
+        }
+    }
+
+    internal fun importById(
             reservationId: Int
     ): Booking {
-        val reservation = api20Request(
-                "/bookings/$reservationId",
-                AdvanceReservationResponse::class.java).booking
+        val reservation = getAdvanceBooking(reservationId)
         println(reservation.bookingCode)
 
         var result: Booking? = null
         transaction {
             importProducts()
             importPersonCategories()
-            val booking = Booking.find {
-                (Bookings.externalSource eq source) and
-                        (Bookings.externalId eq reservation.bookingID)
-            }.firstOrNull() ?: Booking.new {
-                code = reservation.bookingCode
-                externalId = reservation.bookingID
-                externalSource = source
-            }
-
-            importBookingItems(booking, reservation)
-            result = booking
+            result = importByAdvanceReservation(reservation)
         }
         return result!!
+    }
+    
+    fun getAdvanceBooking(reservationId: Int) : AdvanceReservation {
+        return api20Request(
+                "/bookings/$reservationId",
+                AdvanceReservationResponse::class.java).booking
+    }
+    
+    fun importByAdvanceReservation(reservation:AdvanceReservation) : Booking {
+        val bookingCustomer = importCustomer(reservation.customer)
+        
+        val booking = Booking.find {
+            (Bookings.externalSource eq source) and
+                    (Bookings.externalId eq reservation.bookingID)
+        }.firstOrNull() ?: Booking.new {
+            code = reservation.bookingCode
+            externalId = reservation.bookingID
+            externalSource = source
+            customer = bookingCustomer
+        }
+        booking.customer = bookingCustomer
+        booking.status = reservation.bookingStatus
+
+        importBookingItems(booking, reservation)
+        return booking
+    }
+    
+    private fun importCustomer(advanceCustomer : AdvanceCustomer) : Customer {
+        val customer = Customer.find {
+            (Customers.externalSource eq source) and
+                    (Customers.externalId eq advanceCustomer.customerID)
+        }.firstOrNull() ?: Customer.new {
+            externalId = advanceCustomer.customerID
+            externalSource = source
+            firstName = advanceCustomer.firstName
+            lastName = advanceCustomer.lastName
+            address1 = advanceCustomer.address1
+            address2 = advanceCustomer.address2
+            state = advanceCustomer.state
+            country = advanceCustomer.country
+            emailAddress = advanceCustomer.emailAddress
+        }
+        customer.firstName = advanceCustomer.firstName
+        customer.lastName = advanceCustomer.lastName
+        customer.address1 = advanceCustomer.address1
+        customer.address2 = advanceCustomer.address2
+        customer.state = advanceCustomer.state
+        customer.country = advanceCustomer.country
+        customer.emailAddress = advanceCustomer.emailAddress
+        
+        return customer
+    }
+    
+    private fun getExternalPersonCategoryId(personCategoryIndex : Int) : Int {
+        return (10 * locationId) + personCategoryIndex
     }
 
     private fun importPersonCategories() {
@@ -67,7 +137,7 @@ class AdvanceLocationManager {
                 AdvancePersonCategoryResponse::class.java)
         personCategoryResponse.personCategories.forEach {
             wrPersonCategory: AdvancePersonCategory ->
-            val externalPCId = (10 * locationId) + wrPersonCategory.personCategoryIndex
+            val externalPCId = getExternalPersonCategoryId(wrPersonCategory.personCategoryIndex)
             val personCategory = PersonCategory.find {
                 (PersonCategories.externalSource eq source) and
                         (PersonCategories.externalId eq externalPCId)
@@ -79,7 +149,6 @@ class AdvanceLocationManager {
             }
             personCategory.name = wrPersonCategory.label ?: "unnamed"
             personCategory.description = wrPersonCategory.categoryDescription
-            personCategories.put(wrPersonCategory.personCategoryIndex, personCategory)
         }
     }
 
@@ -108,13 +177,16 @@ class AdvanceLocationManager {
         }
         product.name = wrProduct.name
         product.description = wrProduct.shortDescription
-        products.put(wrProduct.productID, product)
     }
 
     private fun importBookingItems(
             targetBooking: Booking,
             reservation: AdvanceReservation
     ) {
+        targetBooking.items.forEach { 
+            it.tickets.forEach(Ticket::delete)
+            it.delete()
+        }
         reservation.bookingItems.forEach {
             wrBookingItem: AdvanceBookingItem ->
             val targetEvent = importAvailability(wrBookingItem.availabilityID)
@@ -124,7 +196,11 @@ class AdvanceLocationManager {
             }.firstOrNull() ?: BookingItem.new {
                 booking = targetBooking
                 event = targetEvent
+                externalSource = source
+                externalId = wrBookingItem.bookingItemID
             }
+            bookingItem.booking = targetBooking
+            bookingItem.event = targetEvent
             importTickets(wrBookingItem, bookingItem)
         }
     }
@@ -136,28 +212,32 @@ class AdvanceLocationManager {
         val personCategoryTicketPrices = mutableMapOf<PersonCategory, BigDecimal>()
         wrBookingItem.lineTotals.filter { it.type == 1101 }.forEach { 
             lineTotal ->
-            val personCategory = personCategories.values.filter { 
-                it.name == lineTotal.label
+            val personCategory = PersonCategory.find {
+                (PersonCategories.externalSource eq source) and (PersonCategories.name eq lineTotal.label)
             }.first()
-            val ticketPrice = lineTotal.price.divide(BigDecimal(lineTotal.quantity))
+            val ticketPrice = lineTotal.price.divide(BigDecimal(lineTotal.quantity), RoundingMode.HALF_UP)
             personCategoryTicketPrices[personCategory] = ticketPrice
         }
         wrBookingItem.lineTotals.filter { it.type == 1500 }
         wrBookingItem.ticketCodes.forEach { 
             wrTicketCode ->
-            val thePersonCategory = personCategories[wrTicketCode.personCategoryIndex]!!
+            val thePersonCategory = PersonCategory.find {
+                (PersonCategories.externalSource eq source) and 
+                        (PersonCategories.externalId eq getExternalPersonCategoryId(wrTicketCode.personCategoryIndex))
+            }.first()
+                    //personCategories[wrTicketCode.personCategoryIndex]!!
             val ticket = Ticket.find {
                 (Tickets.externalSource eq source) and
                         (Tickets.externalId eq wrTicketCode.ticketCodeID)
             }.firstOrNull() ?: Ticket.new {
                 code = wrTicketCode.code
                 bookingItem = targetBookingItem
-                basePrice = personCategoryTicketPrices[thePersonCategory]!!
+                basePrice = personCategoryTicketPrices[thePersonCategory] ?: BigDecimal.ZERO
                 personCategory = thePersonCategory
             }
             ticket.bookingItem = targetBookingItem
             ticket.code = wrTicketCode.code
-            ticket.basePrice = personCategoryTicketPrices[thePersonCategory]!!
+            ticket.basePrice = personCategoryTicketPrices[thePersonCategory] ?: BigDecimal.ZERO
             ticket.personCategory = thePersonCategory
         }
     }
@@ -169,7 +249,10 @@ class AdvanceLocationManager {
                 "/merchants/$locationId/calendars/$availabilityId",
                 AdvanceAvailabilityResponse::class.java).calendarEntry
         println("Event product ID: ${availability.productID}")
-        val eventProduct = products[availability.productID]!!
+        val eventProduct = Product.find {
+            (Products.externalSource eq source) and (Products.externalId eq availability.productID)
+        }.first()
+        //products[availability.productID]!!
         val event = Event.find {
             (Events.externalSource eq source) and (Events.externalId eq availability.availabilityID)
         }.firstOrNull() ?: Event.new {

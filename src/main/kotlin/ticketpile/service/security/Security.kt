@@ -22,7 +22,7 @@ object Users : RelationalTable("user") {
 }
 
 
-object AuthKeys : ReferenceTable("authKey", Users) {
+object AuthKeys : ReferenceTable("advanceAuthKey", Users) {
     val authKey = varchar("authKey", length = authKeySize)
             .index(isUnique = true)
     val expirationDate = datetime("expirationDate").nullable()

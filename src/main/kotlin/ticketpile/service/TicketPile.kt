@@ -1,5 +1,7 @@
 package ticketpile.service
 
+import AdvanceSyncTask
+import initializeSynchronization
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.springframework.beans.factory.annotation.Autowired
@@ -11,6 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.PropertySource
+import org.springframework.core.Ordered
 import org.springframework.stereotype.Component
 import springfox.documentation.builders.ApiInfoBuilder
 import springfox.documentation.builders.PathSelectors
@@ -23,6 +26,7 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
+import ticketpile.service.advance.AdvanceLocationManager
 import ticketpile.service.database.initializeDB
 import ticketpile.service.security.initializeSecurity
 import ticketpile.service.util.transaction
@@ -77,7 +81,7 @@ open class TicketPile {
 
 
 @Component
-open class DBConnection() : CommandLineRunner {
+open class DBConnection() : CommandLineRunner, Ordered {
     @Autowired
     var config = DBConfig()
     
@@ -96,8 +100,12 @@ open class DBConnection() : CommandLineRunner {
         transaction {
             logger.addLogger(StdOutSqlLogger())
             initializeDB()
+            initializeSynchronization()
             initializeSecurity()
         }
+    }
+    override fun getOrder(): Int {
+        return 1
     }
 }
 
@@ -109,4 +117,42 @@ open class DBConfig() {
     var driver = ""
     var user = ""
     var password = ""
+}
+
+
+@Component
+open class AdvanceSynchronizationJob() : CommandLineRunner, Ordered {
+
+    override fun run(vararg args : String) {
+        println("Starting Advance synchronization job")
+        while(true) {
+            transaction {
+                //try {
+                    val task = AdvanceSyncTask.all().firstOrNull()
+                    if (task != null) {
+                        if (task.bookingQueue.isEmpty()) {
+                            task.delete()
+                            return@transaction
+                        }
+                        //There is at least one booking to be processed.
+                        val reservation = task.bookingQueue.firstOrNull()
+                        if (reservation != null) {
+                            println("Advance sync: Importing booking ${reservation.reservationId} from ${task.advanceHost}")
+                            val manager = AdvanceLocationManager(task.advanceHost, task.advanceAuthKey, task.advanceLocationId)
+                            val advanceReservation = manager.getAdvanceBooking(reservation.reservationId)
+                            manager.importByAdvanceReservation(advanceReservation)
+                            reservation.delete()
+                        }
+                    }
+                //} catch (throwable : Throwable) {
+                 //   println("Error in Advance Synchronization job: $throwable")
+                //}
+            }
+            //Thread.sleep(100)
+        }
+    }
+
+    override fun getOrder(): Int {
+        return 2
+    }
 }

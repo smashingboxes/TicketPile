@@ -1,10 +1,9 @@
 package ticketpile.service.advance
 
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import AdvanceSyncTask
+import org.springframework.web.bind.annotation.*
 import ticketpile.service.model.Booking
+import ticketpile.service.util.transaction
 
 /**
  * Controller capable of receiving Advance reservations and dumping
@@ -14,18 +13,38 @@ import ticketpile.service.model.Booking
 @RestController
 @RequestMapping(value = "/advance")
 open class AdvanceReservationController {
-    @PostMapping(value = "/requestImport")
-    fun requestImport(
+    @PostMapping(value = "/singleImport")
+    fun singleImport(
             @RequestParam(value = "advanceHost", required = true)
             host: String,
-            @RequestParam(value = "authKey", required = true)
+            @RequestParam(value = "advanceAuthKey", required = true)
             authorizationKey: String,
-            @RequestParam(value = "locationId", required = true)
+            @RequestParam(value = "advanceLocationId", required = true)
             locationId: Int,
             @RequestParam(value = "reservationId", required = true)
             reservationId: Int
     ): Booking {
         return AdvanceLocationManager(host, authorizationKey, locationId)
-                .importReservation(reservationId)
+                .importById(reservationId)
+    }
+    
+    @PostMapping(value = "/bulkImport")
+    fun bulkImport(
+            @RequestParam(value = "advanceHost", required = true)
+            host: String,
+            @RequestParam(value = "advanceAuthKey", required = true)
+            authorizationKey: String,
+            @RequestParam(value = "advanceLocationId", required = true)
+            locationId: Int
+    ) : AdvanceSyncTask {
+        val manager = AdvanceLocationManager(host, authorizationKey, locationId)
+        return manager.queueAllBookingsForImport()
+    }
+    
+    @GetMapping(value = "/importQueue")
+    fun importQueue() : Iterable<AdvanceSyncTask> {
+        return transaction {
+            AdvanceSyncTask.all().map {it}
+        }
     }
 }

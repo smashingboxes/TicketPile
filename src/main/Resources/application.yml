@@ -1,7 +1,14 @@
 server:
-  port: 8443
+  port: 9443
   ssl:
     key-store: classpath:keystore.jks
     key-store-password: secret
     key-password: password
     protocol: TLSv1.2
+management:
+  shell:
+    auth:
+      simple:
+        user:
+          name: admin
+          password: password
