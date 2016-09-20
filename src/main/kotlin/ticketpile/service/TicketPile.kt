@@ -26,7 +26,6 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
-import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
 import ticketpile.service.database.initializeModel
@@ -35,8 +34,16 @@ import ticketpile.service.springconfig.apiTokenHeader
 import ticketpile.service.util.transaction
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.HttpsURLConnection
 import javax.sql.DataSource
 
+/**
+ * Initialization flow:
+ * 
+ * - Spring app launches
+ * - Kicks off job to connect to DB and create/update tables
+ * - Starts Advance synchronization jobs on schedule
+ */
 @SpringBootApplication(exclude = arrayOf( SecurityAutoConfiguration::class ))
 @EnableSwagger2
 @EnableConfigurationProperties
@@ -85,6 +92,26 @@ open class TicketPile {
     }
 }
 
+@Component
+open class AllowLocalSSL() : CommandLineRunner, Ordered {
+    override fun run(vararg args: String?) {
+        println("Allowing bad SSL certs for localhost")
+        val baseVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
+        HttpsURLConnection.setDefaultHostnameVerifier({
+            hostName, sslSession ->
+            val isValid : Boolean
+            if(hostName == "localhost")
+                isValid = true
+            else
+                isValid = baseVerifier.verify(hostName, sslSession)
+            isValid
+        })
+    }
+
+    override fun getOrder(): Int {
+        return 1
+    }
+}
 
 @Component
 open class DBConnection() : CommandLineRunner, Ordered {
@@ -139,12 +166,18 @@ open class DBConfig() {
 open class BackgroundJobs() : CommandLineRunner, Ordered {
     override fun run(vararg args : String) {
         val scheduler = Executors.newScheduledThreadPool(13)
+        /*scheduler.scheduleAtFixedRate(
+                advanceAuthSync, 0, 5, TimeUnit.MINUTES
+        )
         scheduler.scheduleAtFixedRate(
                 bookingQueueSync, 0, 5, TimeUnit.SECONDS
-        )
-        scheduler.scheduleAtFixedRate(
-                individualBookingSync, 0, 500, TimeUnit.MILLISECONDS
-        )
+        )*/
+        // Schedule 6 separate tasks for booking sync
+        for(offset in 0..0) {
+            scheduler.scheduleAtFixedRate(
+                    individualBookingSync, 0, 1, TimeUnit.MILLISECONDS
+            )
+        }
     }
 
     override fun getOrder(): Int {

@@ -57,4 +57,4 @@ class EntityIDSerializer() : StdSerializer<EntityID<*>>(null as Class<EntityID<*
 }
 
 var defaultIsolationLevel = Connection.TRANSACTION_REPEATABLE_READ
-fun <T> transaction(statement: Transaction.() -> T): T = org.jetbrains.exposed.sql.transactions.transaction(defaultIsolationLevel, 1, statement)
+fun <T> transaction(repetitionAttempts: Int = 1, statement: Transaction.() -> T): T = org.jetbrains.exposed.sql.transactions.transaction(defaultIsolationLevel, 3, statement)

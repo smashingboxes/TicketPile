@@ -1,9 +1,8 @@
 package ticketpile.service.advance
 
-import AdvanceSyncTask
-import AdvanceSyncTaskBooking
-import AdvanceSyncTasks
 import org.jetbrains.exposed.sql.and
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -24,6 +23,22 @@ import java.net.URL
 class AdvanceLocationManager {
     companion object {
         private val restTemplate = RestTemplate()
+        
+        fun getAuthKey(host:String, user:String, password:String) : String {
+            val url = URL(URL(host), "/services/api20/authorize/login")
+            println("Contacting WebReserv via $url")
+            val entity = HttpEntity<AdvanceAuthRequest>(
+                    AdvanceAuthRequest(user, password)
+            )
+            val responseEntity = restTemplate.exchange(
+                    URI(url.toString()), 
+                    HttpMethod.POST, 
+                    entity, 
+                    AdvanceAuthResponse::class.java
+            )
+            println(responseEntity.toString())
+            return responseEntity.body.token
+        }
     }
     constructor(host: String, authorizationKey: String, locationId: Int) {
         if (authorizationKey.startsWith("Bearer:")) authKey = authorizationKey.substring(7)
@@ -36,15 +51,21 @@ class AdvanceLocationManager {
     private val authKey: String
     private val locationId: Int
     
-    fun queueAllBookingsForImport() : AdvanceSyncTask {
+    fun synchronize(
+            user: String?,
+            password: String?
+    ) : AdvanceSyncTask {
+        transaction {
+            importProducts()
+            importPersonCategories()
+        }
+        
         val bookings = api20Request(
                 "/bookings/modified",//?nolines=${Int.MAX_VALUE}",
                 AdvanceModifiedBookingsResponse::class.java
         ).bookingIds
 
         return transaction {
-            importProducts()
-            importPersonCategories()
             val importTask = AdvanceSyncTask.find {
                 (AdvanceSyncTasks.advanceHost eq source) and 
                 (AdvanceSyncTasks.advanceLocationId eq locationId)
@@ -53,7 +74,11 @@ class AdvanceLocationManager {
                 advanceAuthKey = authKey
                 advanceLocationId = locationId
             }
+            importTask.advanceUser = user
+            importTask.advancePassword = password
             importTask.advanceAuthKey = authKey
+            importTask.authenticated = true
+            importTask.lastRefresh = DateTime(DateTimeZone.UTC).minusMinutes(2)
             for(bookingId in bookings) {
                 AdvanceSyncTaskBooking.new {
                     reservationId = bookingId
@@ -273,6 +298,13 @@ class AdvanceLocationManager {
         event.capacity = availability.maxCapacity
         event.product = eventProduct
         return event
+    }
+    
+    val currentUser : AdvanceUser get() {
+        return api20Request(
+                "/authorization/current-user", 
+                AdvanceUserRespose::class.java
+        ).user
     }
 
     private fun <T> api20Request(

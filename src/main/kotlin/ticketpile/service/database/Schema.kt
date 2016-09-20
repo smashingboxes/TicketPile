@@ -8,7 +8,7 @@ package ticketpile.service.database
  */
 // Primary entities
 object Bookings : RelationalTable("booking") {
-    val code = varchar("name", length = 128).index(isUnique = true)
+    val code = varchar("name", length = 128).index()
     val status = varchar("status", length = 128).index()
     val customer = reference("customer", Customers)
 }

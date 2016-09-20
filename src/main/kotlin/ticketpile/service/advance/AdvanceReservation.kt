@@ -1,5 +1,6 @@
 package ticketpile.service.advance
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.joda.time.DateTime
 import java.math.BigDecimal
 
@@ -8,6 +9,25 @@ import java.math.BigDecimal
  * 
  * Created by jonlatane on 8/28/16.
  */
+
+data class AdvanceAuthRequest(
+        @get:JsonProperty
+        var username : String,
+        @get:JsonProperty
+        var password : String
+)
+class AdvanceAuthResponse() {
+    @get:JsonProperty
+    lateinit var token : String
+}
+
+class AdvanceUserRespose() {
+    lateinit var user : AdvanceUser
+}
+
+class AdvanceUser() {
+    lateinit var emailAddress : String
+}
 
 class AdvanceModifiedBookingsResponse() {
     var bookingIds = emptyList<Int>()

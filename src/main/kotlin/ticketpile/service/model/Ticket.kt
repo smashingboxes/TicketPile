@@ -24,10 +24,29 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
     @get:JsonProperty
     var basePrice by Tickets.basePrice
     @get:JsonProperty
+    val bookingAddOnAdjustments by children(TicketBookingAddOn)
+    @get:JsonProperty
+    val bookingManualAdjustments by children(TicketBookingManualAdjustment)
+    @get:JsonProperty
+    val bookingDiscounts by children(TicketBookingDiscount)
+    @get:JsonProperty
+    val bookingItemAddOnAdjustments by children(TicketBookingItemAddOn)
+    @get:JsonProperty
     val grossRevenue : BigDecimal get() {
         if(bookingItem.booking.status != "confirmed")
             return BigDecimal.ZERO
-        return basePrice
+        var result = basePrice
+        for(adjustments in listOf<List<Adjustment>>(
+                bookingAddOnAdjustments,
+                bookingManualAdjustments,
+                bookingDiscounts,
+                bookingItemAddOnAdjustments
+        )) {
+            for(adjustment in adjustments) {
+                result += adjustment.amount
+            }
+        }
+        return result
     }
 }
 
@@ -42,93 +61,42 @@ class PersonCategory(id: EntityID<Int>) : PrimaryEntity(id, PersonCategories) {
     var description by PersonCategories.description
 }
 
-class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id) {
+class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>{
     companion object : IntEntityClass<TicketBookingAddOn>(TicketBookingAddOns)
-    var ticket by Ticket referencedOn TicketBookingAddOns.parent
-
+    override var subject by Ticket referencedOn TicketBookingAddOns.parent
+    
     @get:JsonProperty
-    val ticketBookingAddOnId by PK
+    override var addOn by AddOn referencedOn TicketBookingAddOns.addon
     @get:JsonProperty
-    val addOn by AddOn referencedOn TicketBookingAddOns.addon
-    @get:JsonProperty
-    val amount by TicketBookingAddOns.amount
+    override var amount by TicketBookingAddOns.amount
 }
 
 class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustment<Ticket> {
     companion object : IntEntityClass<TicketBookingDiscount>(TicketBookingDiscounts)
-    var ticket by Ticket referencedOn TicketBookingDiscounts.parent
+    override var subject by Ticket referencedOn TicketBookingDiscounts.parent
 
-    @get:JsonProperty
-    val ticketBookingDiscountId by IDDelegate(this)
     @get:JsonProperty
     override var discount by Discount referencedOn TicketBookingDiscounts.discount
     @get:JsonProperty
     override var amount by TicketBookingDiscounts.amount
-    override var subject by Ticket referencedOn TicketBookingDiscounts.parent
 }
 
-class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id) {
+class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Ticket> {
     companion object : IntEntityClass<TicketBookingManualAdjustment>(TicketBookingManualAdjustments)
-    var ticket by Ticket referencedOn TicketBookingManualAdjustments.parent
+    override var subject by Ticket referencedOn TicketBookingManualAdjustments.parent
 
     @get:JsonProperty
-    val ticketBookingManualAdjustmentId by IDDelegate(this)
+    override var description by TicketBookingManualAdjustments.description
     @get:JsonProperty
-    val description by TicketBookingManualAdjustments.description
-    @get:JsonProperty
-    val amount by TicketBookingManualAdjustments.amount
+    override var amount by TicketBookingManualAdjustments.amount
 }
 
-class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id) {
+class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket> {
     companion object : IntEntityClass<TicketBookingAddOn>(TicketBookingItemAddOns)
-    var ticket by Ticket referencedOn TicketBookingItemAddOns.parent
+    override var subject by Ticket referencedOn TicketBookingItemAddOns.parent
 
     @get:JsonProperty
-    val ticketBookingItemAddOnId by PK
+    override var addOn by AddOn referencedOn TicketBookingItemAddOns.addon
     @get:JsonProperty
-    val addOn by AddOn referencedOn TicketBookingItemAddOns.addon
-    @get:JsonProperty
-    val amount by TicketBookingItemAddOns.amount
+    override var amount by TicketBookingItemAddOns.amount
 }
-
-/* 
-The following types are not supported by ZOZI.
-We can add support for them easily by uncommenting this and
-uncommenting their tables in Schema.kt
-
-class TicketAddOn(id: EntityID<Int>) : RelationalEntity(id) {
-    companion object : IntEntityClass<TicketAddOn>(TicketAddOns)
-    var ticket by Ticket referencedOn TicketAddOns.parent
-    
-    @get:JsonProperty
-    val ticketAddOnId by PK
-    @get:JsonProperty
-    val addOn by AddOn referencedOn TicketAddOns.addon
-    @get:JsonProperty
-    val amount by TicketAddOns.amount
-}
-
-class TicketDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustment<Ticket> {
-    companion object : IntEntityClass<TicketDiscount>(TicketDiscounts)
-    var ticket by Ticket referencedOn TicketDiscounts.parent
-    
-    @get:JsonProperty
-    val ticketDiscountId by IDDelegate(this)
-    @get:JsonProperty
-    override var discount by Discount referencedOn TicketDiscounts.discount
-    @get:JsonProperty
-    override var amount by TicketDiscounts.amount
-    override var subject by Ticket referencedOn TicketDiscounts.parent
-}
-
-class TicketManualAdjustment(id: EntityID<Int>) : RelationalEntity(id) {
-    companion object : IntEntityClass<TicketManualAdjustment>(TicketManualAdjustments)
-    var ticket by Ticket referencedOn TicketManualAdjustments.parent
-    
-    @get:JsonProperty
-    val ticketManualAdjustmentId by IDDelegate(this)
-    @get:JsonProperty
-    val description by TicketManualAdjustments.description
-    @get:JsonProperty
-    val amount by TicketManualAdjustments.amount
-}*/

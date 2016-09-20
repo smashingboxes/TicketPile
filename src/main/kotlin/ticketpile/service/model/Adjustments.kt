@@ -46,26 +46,25 @@ class Discount(id: EntityID<Int>) : RelationalEntity(id) {
     val discountId : Int by PK
 }
 
-interface DiscountAdjustment<SubjectType : IntEntity> {
+interface Adjustment {
+    @get:JsonProperty
+    var amount : BigDecimal
+}
+
+interface DiscountAdjustment<SubjectType : IntEntity> : Adjustment {
     var subject : SubjectType
     @get:JsonProperty
     var discount : Discount
-    @get:JsonProperty
-    var amount : BigDecimal
 }
 
-interface AddOnAdjustment<SubjectType : IntEntity> {
+interface AddOnAdjustment<SubjectType : IntEntity> : Adjustment {
     var subject : SubjectType
     @get:JsonProperty
     var addOn : AddOn
-    @get:JsonProperty
-    var amount : BigDecimal
 }
 
-interface ManualAdjustment<SubjectType : IntEntity> {
+interface ManualAdjustment<SubjectType : IntEntity> : Adjustment {
     var subject : SubjectType
     @get:JsonProperty
     var description : String
-    @get:JsonProperty
-    var amount : BigDecimal
 }
