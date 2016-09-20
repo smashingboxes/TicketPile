@@ -1,6 +1,7 @@
 package ticketpile.service
 
-import AdvanceSyncTask
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import initializeSynchronization
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.StdOutSqlLogger
@@ -26,10 +27,14 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
-import ticketpile.service.advance.AdvanceLocationManager
+import ticketpile.service.advance.bookingQueueSync
+import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.database.initializeDB
 import ticketpile.service.security.initializeSecurity
 import ticketpile.service.util.transaction
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import javax.sql.DataSource
 
 @SpringBootApplication(exclude = arrayOf( SecurityAutoConfiguration::class ))
 @EnableSwagger2
@@ -90,12 +95,13 @@ open class DBConnection() : CommandLineRunner, Ordered {
         println("DB Server: ${config.url}")
         println("DB Driver: ${config.driver}")
         println("DB User: ${config.user}")
-        Database.connect(
+        /*Database.connect(
                 url=config.url,
                 driver=config.driver,
                 user=config.user,
                 password=config.password
-        )
+        )*/
+        Database.connect(getDataSource())
         println("Setting up database tables")
         transaction {
             logger.addLogger(StdOutSqlLogger())
@@ -104,6 +110,19 @@ open class DBConnection() : CommandLineRunner, Ordered {
             initializeSecurity()
         }
     }
+    
+    private fun getDataSource() :DataSource {
+        val hikariConfig = HikariConfig()
+        hikariConfig.jdbcUrl = config.url
+        hikariConfig.username = config.user
+        hikariConfig.password = config.password
+        hikariConfig.addDataSourceProperty("cachePrepStmts", "true")
+        hikariConfig.addDataSourceProperty("prepStmtCacheSize", "250")
+        hikariConfig.addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
+
+        return HikariDataSource(hikariConfig)
+    }
+    
     override fun getOrder(): Int {
         return 1
     }
@@ -121,35 +140,15 @@ open class DBConfig() {
 
 
 @Component
-open class AdvanceSynchronizationJob() : CommandLineRunner, Ordered {
-
+open class BackgroundJobs() : CommandLineRunner, Ordered {
     override fun run(vararg args : String) {
-        println("Starting Advance synchronization job")
-        while(true) {
-            transaction {
-                //try {
-                    val task = AdvanceSyncTask.all().firstOrNull()
-                    if (task != null) {
-                        if (task.bookingQueue.isEmpty()) {
-                            task.delete()
-                            return@transaction
-                        }
-                        //There is at least one booking to be processed.
-                        val reservation = task.bookingQueue.firstOrNull()
-                        if (reservation != null) {
-                            println("Advance sync: Importing booking ${reservation.reservationId} from ${task.advanceHost}")
-                            val manager = AdvanceLocationManager(task.advanceHost, task.advanceAuthKey, task.advanceLocationId)
-                            val advanceReservation = manager.getAdvanceBooking(reservation.reservationId)
-                            manager.importByAdvanceReservation(advanceReservation)
-                            reservation.delete()
-                        }
-                    }
-                //} catch (throwable : Throwable) {
-                 //   println("Error in Advance Synchronization job: $throwable")
-                //}
-            }
-            //Thread.sleep(100)
-        }
+        val scheduler = Executors.newScheduledThreadPool(13)
+        scheduler.scheduleAtFixedRate(
+                bookingQueueSync, 0, 5, TimeUnit.SECONDS
+        )
+        scheduler.scheduleAtFixedRate(
+                individualBookingSync, 0, 500, TimeUnit.MILLISECONDS
+        )
     }
 
     override fun getOrder(): Int {

@@ -3,6 +3,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.sql.SchemaUtils
+import org.joda.time.DateTime
 import ticketpile.service.database.ReferenceTable
 import ticketpile.service.database.RelationalTable
 import ticketpile.service.util.RelationalEntity
@@ -15,6 +16,12 @@ object AdvanceSyncTasks : RelationalTable("advanceSyncTask") {
     val advanceHost = varchar("advanceHost", length = 128)
     val advanceAuthKey = varchar("advanceAuthKey", length = 128)
     val advanceLocationId = integer("advanceLocationId")
+    val advanceUser = varchar("advanceUser", length = 128).nullable()
+    val advancePassword = varchar("advancePassword", length = 128).nullable()
+    val lastRefresh = datetime("lastRefresh").default(
+            //DateTime.parse("1970-01-01T00:00:00")
+    DateTime(0)
+    )
 }
 
 
@@ -33,6 +40,11 @@ class AdvanceSyncTask(id: EntityID<Int>) : RelationalEntity(id) {
     var advanceLocationId by AdvanceSyncTasks.advanceLocationId
     @get:JsonProperty
     val bookingQueue by children(AdvanceSyncTaskBooking)
+    @get:JsonProperty
+    var lastRefresh by AdvanceSyncTasks.lastRefresh
+    @get:JsonProperty
+    var advanceUser by AdvanceSyncTasks.advanceUser
+    var advancePassword by AdvanceSyncTasks.advancePassword
 }
 
 class AdvanceSyncTaskBooking(id: EntityID<Int>) : RelationalEntity(id) {

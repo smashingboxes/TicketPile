@@ -2,6 +2,7 @@ package ticketpile.service.advance
 
 import AdvanceSyncTask
 import AdvanceSyncTaskBooking
+import AdvanceSyncTasks
 import org.jetbrains.exposed.sql.and
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -16,7 +17,7 @@ import java.net.URI
 import java.net.URL
 
 /**
- * Handles per-location imports of WebReserv bookings.
+ * Handles per-location imports of Advance API20 bookings.
  * 
  * Created by jonlatane on 9/3/16.
  */
@@ -34,8 +35,6 @@ class AdvanceLocationManager {
     private val source: String
     private val authKey: String
     private val locationId: Int
-    //private val personCategories = mutableMapOf<Int, PersonCategory>()
-    //private val products = mutableMapOf<Int, Product>()
     
     fun queueAllBookingsForImport() : AdvanceSyncTask {
         val bookings = api20Request(
@@ -46,11 +45,15 @@ class AdvanceLocationManager {
         return transaction {
             importProducts()
             importPersonCategories()
-            val importTask = AdvanceSyncTask.new { 
+            val importTask = AdvanceSyncTask.find {
+                (AdvanceSyncTasks.advanceHost eq source) and 
+                (AdvanceSyncTasks.advanceLocationId eq locationId)
+            }.firstOrNull() ?: AdvanceSyncTask.new {
                 advanceHost = source
                 advanceAuthKey = authKey
                 advanceLocationId = locationId
             }
+            importTask.advanceAuthKey = authKey
             for(bookingId in bookings) {
                 AdvanceSyncTaskBooking.new {
                     reservationId = bookingId
@@ -60,6 +63,7 @@ class AdvanceLocationManager {
             importTask
         }
     }
+    
 
     internal fun importById(
             reservationId: Int
