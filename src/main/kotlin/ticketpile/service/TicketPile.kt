@@ -3,7 +3,6 @@ package ticketpile.service
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.SpringApplication
@@ -26,6 +25,7 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
+import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
 import ticketpile.service.database.initializeModel
@@ -127,7 +127,6 @@ open class DBConnection() : CommandLineRunner, Ordered {
         Database.connect(getDataSource())
         println("Setting up database tables")
         transaction {
-            logger.addLogger(StdOutSqlLogger())
             initializeModel()
             initializeSynchronization()
             initializeSecurity()
@@ -166,16 +165,13 @@ open class DBConfig() {
 open class BackgroundJobs() : CommandLineRunner, Ordered {
     override fun run(vararg args : String) {
         val scheduler = Executors.newScheduledThreadPool(13)
-        /*scheduler.scheduleAtFixedRate(
-                advanceAuthSync, 0, 5, TimeUnit.MINUTES
-        )
         scheduler.scheduleAtFixedRate(
                 bookingQueueSync, 0, 5, TimeUnit.SECONDS
-        )*/
-        // Schedule 6 separate tasks for booking sync
-        for(offset in 0..0) {
+        )
+        // Schedule multiple tasks for booking sync
+        for(offset in 0..5) {
             scheduler.scheduleAtFixedRate(
-                    individualBookingSync, 0, 1, TimeUnit.MILLISECONDS
+                    individualBookingSync, 0, 250, TimeUnit.MILLISECONDS
             )
         }
     }

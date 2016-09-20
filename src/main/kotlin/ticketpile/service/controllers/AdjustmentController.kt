@@ -2,7 +2,6 @@ package ticketpile.service.controllers
 
 import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.sql.StdOutSqlLogger
 import ticketpile.service.model.*
 import ticketpile.service.util.BadRequestException
 import ticketpile.service.util.ResourceNotFoundException
@@ -28,7 +27,6 @@ open abstract class AdjustmentController<SubjectType: IntEntity> (
         var subjectAdjustment : AdjustmentType? = null
 
         transaction {
-            logger.addLogger(StdOutSqlLogger())
             subjectAdjustment = adjustmentClass.new {
                 subject = subjectClass.findById(subjectId)!!
                 discount = Discount.findById(discountId)!!
@@ -67,7 +65,6 @@ open abstract class AdjustmentController<SubjectType: IntEntity> (
     AdjustmentClass : EntityClass<Int, AdjustmentType> {
         var subjectAdjustment : AdjustmentType? = null
         transaction {
-            logger.addLogger(StdOutSqlLogger())
             subjectAdjustment = adjustmentClass.new {
                 subject = subjectClass.findById(subjectId)!!
                 addOn = AddOn.findById(addOnId)!!
@@ -106,7 +103,6 @@ open abstract class AdjustmentController<SubjectType: IntEntity> (
     AdjustmentClass : EntityClass<Int, AdjustmentType> {
         var subjectAdjustment : AdjustmentType? = null
         transaction {
-            logger.addLogger(StdOutSqlLogger())
             subjectAdjustment = adjustmentClass.new {
                 subject = subjectClass.findById(subjectId)!!
                 description = desc

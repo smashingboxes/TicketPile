@@ -94,9 +94,9 @@ class AdvanceSyncTaskBooking(id: EntityID<Int>) : RelationalEntity(id) {
 
 // Job Logic
 private fun getActiveTasks() : Iterable<AdvanceSyncTask> {
-    return transaction {
+    return transaction(statement = {
         AdvanceSyncTask.find{ AdvanceSyncTasks.authenticated eq true }.forUpdate().map{it}
-    }
+    }, logging = false)
 }
 
 val bookingQueueSync = {
@@ -113,10 +113,7 @@ val bookingQueueSync = {
                     task.advanceLocationId
             )
             try {
-                manager.synchronize(
-                        task.advanceUser,
-                        task.advancePassword
-                )
+                manager.synchronize(task)
             } catch(t: HttpClientErrorException) {
                 if(t.rawStatusCode == 401)
                     task.updateAuthentication()
@@ -126,18 +123,18 @@ val bookingQueueSync = {
 }
 
 val individualBookingSync = {
-    println("Individual Booking sync")
+    //println("Individual Booking sync")
     val tasks = getActiveTasks()
     tasks.forEach { task ->
-        val taskBooking = transaction {
+        val taskBooking = transaction(statement = {
             val booking = AdvanceSyncTaskBooking.find {
                 (AdvanceSyncTaskBookings.parent eq task.id) and (AdvanceSyncTaskBookings.locked eq false)
             }.forUpdate().firstOrNull()
             booking?.locked = true
             booking
-        }
-        println("Syncing booking ${taskBooking?.reservationId} from ${task.advanceHost}")
-        if (taskBooking != null) {
+        }, logging = false)
+        if (taskBooking != null) {        
+            println("Syncing booking ${taskBooking.reservationId} from ${task.advanceHost}")
             val manager = AdvanceLocationManager(task.advanceHost, task.advanceAuthKey, task.advanceLocationId)
             try {
                 val advanceReservation = manager.getAdvanceBooking(taskBooking.reservationId)

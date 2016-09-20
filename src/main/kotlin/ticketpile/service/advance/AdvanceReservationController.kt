@@ -1,5 +1,6 @@
 package ticketpile.service.advance
 
+import org.jetbrains.exposed.sql.and
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.client.HttpClientErrorException
 import ticketpile.service.model.Booking
@@ -58,11 +59,22 @@ open class AdvanceReservationController {
         }
         
         val manager = AdvanceLocationManager(host, authKey, locationId)
-        val task = manager.synchronize(
-                advanceUser,
-                advancePassword
-        )
-        return task
+        val task = transaction {
+            val importTask = AdvanceSyncTask.find {
+                (AdvanceSyncTasks.advanceHost eq manager.source) and
+                        (AdvanceSyncTasks.advanceLocationId eq locationId)
+            }.firstOrNull() ?: AdvanceSyncTask.new {
+                advanceHost = manager.source
+                advanceAuthKey = authKey
+                advanceLocationId = locationId
+            }
+            importTask.advanceUser = advanceUser
+            importTask.advancePassword = advancePassword
+            importTask.advanceAuthKey = authKey
+            importTask.authenticated = true
+            importTask
+        }
+        return manager.synchronize(task)
     }
     
     @GetMapping(value = "/synchronizationQueues")

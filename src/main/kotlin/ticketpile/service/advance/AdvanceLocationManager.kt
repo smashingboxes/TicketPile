@@ -3,6 +3,7 @@ package ticketpile.service.advance
 import org.jetbrains.exposed.sql.and
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
+import org.joda.time.format.DateTimeFormat
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -23,6 +24,9 @@ import java.net.URL
 class AdvanceLocationManager {
     companion object {
         private val restTemplate = RestTemplate()
+        private val dateTimeFormatter = DateTimeFormat.forPattern(
+                "yyyy-MM-dd%20HH:mm:ss"
+        )
         
         fun getAuthKey(host:String, user:String, password:String) : String {
             val url = URL(URL(host), "/services/api20/authorize/login")
@@ -47,13 +51,12 @@ class AdvanceLocationManager {
         source = URL(URL(host), "/").toString()
     }
 
-    private val source: String
+    var source: String
     private val authKey: String
     private val locationId: Int
     
     fun synchronize(
-            user: String?,
-            password: String?
+            syncTask : AdvanceSyncTask
     ) : AdvanceSyncTask {
         transaction {
             importProducts()
@@ -61,23 +64,14 @@ class AdvanceLocationManager {
         }
         
         val bookings = api20Request(
-                "/bookings/modified",//?nolines=${Int.MAX_VALUE}",
+                "/bookings/modified?since=${
+                    dateTimeFormatter.print(syncTask.lastRefresh)
+                }",
                 AdvanceModifiedBookingsResponse::class.java
         ).bookingIds
 
         return transaction {
-            val importTask = AdvanceSyncTask.find {
-                (AdvanceSyncTasks.advanceHost eq source) and 
-                (AdvanceSyncTasks.advanceLocationId eq locationId)
-            }.firstOrNull() ?: AdvanceSyncTask.new {
-                advanceHost = source
-                advanceAuthKey = authKey
-                advanceLocationId = locationId
-            }
-            importTask.advanceUser = user
-            importTask.advancePassword = password
-            importTask.advanceAuthKey = authKey
-            importTask.authenticated = true
+            val importTask = AdvanceSyncTask[syncTask.id]
             importTask.lastRefresh = DateTime(DateTimeZone.UTC).minusMinutes(2)
             for(bookingId in bookings) {
                 AdvanceSyncTaskBooking.new {

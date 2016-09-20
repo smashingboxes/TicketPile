@@ -29,7 +29,6 @@ class TransactionSerializer(val serializer : JsonSerializer<Any>) : JsonSerializ
             serializerProvider : SerializerProvider){
         if(o is Entity<*> && TransactionManager.currentOrNull() == null) {
             transaction {
-                logger.addLogger(StdOutSqlLogger())
                 serializer.serialize(o, jsonGenerator, serializerProvider)
             }
         } else {
@@ -57,4 +56,16 @@ class EntityIDSerializer() : StdSerializer<EntityID<*>>(null as Class<EntityID<*
 }
 
 var defaultIsolationLevel = Connection.TRANSACTION_REPEATABLE_READ
-fun <T> transaction(repetitionAttempts: Int = 1, statement: Transaction.() -> T): T = org.jetbrains.exposed.sql.transactions.transaction(defaultIsolationLevel, 3, statement)
+fun <T> transaction(
+        logging: Boolean = true,
+        isolationLevel: Int = defaultIsolationLevel,
+        repetitionAttempts: Int = 3,
+        statement: Transaction.() -> T
+): T = org.jetbrains.exposed.sql.transactions.transaction(
+        isolationLevel,
+        repetitionAttempts,
+        {
+            if (logging)
+                logger.addLogger(StdOutSqlLogger())
+            statement()
+        })
