@@ -21,6 +21,7 @@ import javax.servlet.FilterChain
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
+val apiTokenHeader = "Bearer"
 
 /**
  * Spring Authentication provider that lets user see API docs, but not get through unless
@@ -29,9 +30,11 @@ import javax.servlet.http.HttpServletResponse
  */
 @Configuration
 @EnableWebSecurity
-open class WebSecurityConfig : WebSecurityConfigurerAdapter() {
+open class SecurityConfiguration : WebSecurityConfigurerAdapter() {
     override fun configure(web : WebSecurity) {
-        web.ignoring().antMatchers( // Allow Swagger UI stuff through
+        // Allow Swagger UI stuff through. No one without
+        // the admin credentials can hit real data.
+        web.ignoring().antMatchers(
                 "/swagger-ui.html",
                 "/webjars/springfox-swagger-ui/**/*",
                 "/swagger-resources",
@@ -72,7 +75,7 @@ class BearerTokenFilter() : OncePerRequestFilter() {
             response: HttpServletResponse?,
             filterChain: FilterChain?
     ) {
-        val bearer : String = request?.getHeader("Bearer") ?: ""
+        val bearer : String = request?.getHeader(apiTokenHeader) ?: ""
         val user = transaction {
             AuthKey.find {
                 AuthKeys.authKey eq bearer

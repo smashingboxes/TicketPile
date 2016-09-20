@@ -27,6 +27,6 @@ internal val tables = arrayOf(
         TicketBookingItemAddOns
 )
 
-fun initializeDB() {
+fun initializeModel() {
     SchemaUtils.createMissingTablesAndColumns(*tables)
 }

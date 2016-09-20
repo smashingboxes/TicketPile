@@ -2,7 +2,6 @@ package ticketpile.service
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import initializeSynchronization
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.springframework.beans.factory.annotation.Autowired
@@ -29,8 +28,10 @@ import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
 import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
-import ticketpile.service.database.initializeDB
+import ticketpile.service.advance.initializeSynchronization
+import ticketpile.service.database.initializeModel
 import ticketpile.service.security.initializeSecurity
+import ticketpile.service.springconfig.apiTokenHeader
 import ticketpile.service.util.transaction
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -57,7 +58,7 @@ open class TicketPile {
                         "or other BI tools.")
                 .version("0.1")
                 .build())
-        .securitySchemes(listOf(ApiKey("mykey", "Bearer", "header")))
+        .securitySchemes(listOf(ApiKey("mykey", apiTokenHeader, "header")))
         .securityContexts(listOf(
                 SecurityContext.builder()
                 .securityReferences(listOf(
@@ -75,10 +76,10 @@ open class TicketPile {
             null,
             null,
             null,
-            null,
+            "TicketPile",
             null,
             ApiKeyVehicle.HEADER,
-            "Bearer",
+            apiTokenHeader,
             null
         )
     }
@@ -95,23 +96,18 @@ open class DBConnection() : CommandLineRunner, Ordered {
         println("DB Server: ${config.url}")
         println("DB Driver: ${config.driver}")
         println("DB User: ${config.user}")
-        /*Database.connect(
-                url=config.url,
-                driver=config.driver,
-                user=config.user,
-                password=config.password
-        )*/
+        
         Database.connect(getDataSource())
         println("Setting up database tables")
         transaction {
             logger.addLogger(StdOutSqlLogger())
-            initializeDB()
+            initializeModel()
             initializeSynchronization()
             initializeSecurity()
         }
     }
     
-    private fun getDataSource() :DataSource {
+    private fun getDataSource() : DataSource {
         val hikariConfig = HikariConfig()
         hikariConfig.jdbcUrl = config.url
         hikariConfig.username = config.user

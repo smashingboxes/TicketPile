@@ -1,3 +1,4 @@
+package ticketpile.service.advance
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
@@ -7,21 +8,21 @@ import org.joda.time.DateTime
 import ticketpile.service.database.ReferenceTable
 import ticketpile.service.database.RelationalTable
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.transaction
 
 /**
- * Two tables and their entities, and a job to import them.
+ * Two tables and their entities, and two jobs to be run in the
+ * background at whatever rate we like.
  */
 
+//DB Model
 object AdvanceSyncTasks : RelationalTable("advanceSyncTask") {
     val advanceHost = varchar("advanceHost", length = 128)
     val advanceAuthKey = varchar("advanceAuthKey", length = 128)
     val advanceLocationId = integer("advanceLocationId")
     val advanceUser = varchar("advanceUser", length = 128).nullable()
     val advancePassword = varchar("advancePassword", length = 128).nullable()
-    val lastRefresh = datetime("lastRefresh").default(
-            //DateTime.parse("1970-01-01T00:00:00")
-    DateTime(0)
-    )
+    val lastRefresh = datetime("lastRefresh").default(DateTime(0))
 }
 
 
@@ -29,6 +30,7 @@ object AdvanceSyncTaskBookings : ReferenceTable("advanceSyncTaskBooking", Advanc
     val reservationId = integer("reservationId")
 }
 
+//Entities
 class AdvanceSyncTask(id: EntityID<Int>) : RelationalEntity(id) {
     companion object : IntEntityClass<AdvanceSyncTask>(AdvanceSyncTasks)
 
@@ -54,8 +56,55 @@ class AdvanceSyncTaskBooking(id: EntityID<Int>) : RelationalEntity(id) {
     var reservationId by AdvanceSyncTaskBookings.reservationId
 }
 
-internal val tables = arrayOf(AdvanceSyncTasks, AdvanceSyncTaskBookings)
+// Job Runnables
+val bookingQueueSync = {
+    println("Booking Queue sync")
+    try {
+        val tasks = transaction {
+            AdvanceSyncTask.all().map{it}
+        }
+        for (task in tasks) {
+            transaction {
+                if (task.bookingQueue.isEmpty()) {
+                    val manager = AdvanceLocationManager(
+                            task.advanceHost,
+                            task.advanceAuthKey,
+                            task.advanceLocationId
+                    )
+                    manager.queueAllBookingsForImport()
+                }
+            }
+        }
+    } catch(t : Throwable) {
+        println("Error in Booking Queue sync: $t")
+    }
+}
 
+val individualBookingSync = {
+    println("Individual booking sync")
+    try {
+        val tasks = transaction {
+            AdvanceSyncTask.all().map{it}
+        }
+        for (task in tasks) {
+            transaction {
+                val reservation = task.bookingQueue.firstOrNull()
+                if (reservation != null) {
+                    println("Advance sync: Importing booking ${reservation.reservationId} from ${task.advanceHost}")
+                    val manager = AdvanceLocationManager(task.advanceHost, task.advanceAuthKey, task.advanceLocationId)
+                    val advanceReservation = manager.getAdvanceBooking(reservation.reservationId)
+                    manager.importByAdvanceReservation(advanceReservation)
+                    reservation.delete()
+                }
+            }
+        }
+    } catch(t : Throwable) {
+        println("Error in booking sync: $t")
+    }
+}
+
+// Initialization
+internal val tables = arrayOf(AdvanceSyncTasks, AdvanceSyncTaskBookings)
 fun initializeSynchronization() {
     SchemaUtils.createMissingTablesAndColumns(*tables)
 }
