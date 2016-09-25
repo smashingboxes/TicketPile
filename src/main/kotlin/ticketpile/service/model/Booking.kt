@@ -6,6 +6,7 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
+import java.math.BigDecimal
 
 /**
  * Created by jonlatane on 8/28/16.
@@ -43,6 +44,24 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings) {
     
     @get:JsonProperty
     var customer by Customer referencedOn Bookings.customer
+    
+    internal val tickets : Iterable<Ticket> get() {
+        val result = mutableListOf<Ticket>()
+        items.forEach {
+            it.tickets.forEach { 
+                result.add(it)
+            }
+        }
+        return result
+    }
+    
+    internal val grossRevenue : BigDecimal get() {
+        var result = BigDecimal.ZERO
+        tickets.forEach {
+            result += it.grossRevenue
+        }
+        return result
+    }
 }
 
 class BookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Booking> {
@@ -73,14 +92,16 @@ class BookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustm
     override var subject by Booking referencedOn BookingDiscounts.parent
 }
 
-class BookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id) {
+class BookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Booking> {
     companion object : IntEntityClass<BookingManualAdjustment>(BookingManualAdjustments)
     var booking by Booking referencedOn BookingManualAdjustments.parent
 
     @get:JsonProperty
     val bookingManualAdjustmentId by PK
     @get:JsonProperty
-    var description by BookingManualAdjustments.description
+    override var description by BookingManualAdjustments.description
     @get:JsonProperty
-    var amount by BookingManualAdjustments.amount
+    override var amount by BookingManualAdjustments.amount
+
+    override var subject by Booking referencedOn BookingDiscounts.parent
 }

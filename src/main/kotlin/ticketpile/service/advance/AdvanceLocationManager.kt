@@ -121,6 +121,10 @@ class AdvanceLocationManager {
         booking.status = reservation.bookingStatus
 
         importBookingItems(booking, reservation)
+        
+        // After importing data for the booking, transform
+        // all of the adjustments on it onto its Tickets
+        TicketAdjustmentTransform.transform(booking)
         return booking
     }
     

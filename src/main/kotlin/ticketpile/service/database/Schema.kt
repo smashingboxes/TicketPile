@@ -85,11 +85,11 @@ object TicketBookingAddOns : AddOnTable("ticketBookingAddOn", Tickets) {
     val bookingAddOn = reference("bookingAddOn", BookingAddOns)
 }
 object TicketBookingDiscounts : DiscountTable("ticketBookingDiscount", Tickets) {
-    val bookingDiscounts = reference("bookingDiscount", BookingDiscounts)
+    val bookingDiscount = reference("bookingDiscount", BookingDiscounts)
 }
 object TicketBookingManualAdjustments : ManualAdjustmentTable("ticketBookingManualAdjustment", Tickets) {
-    val bookingAddOn = reference("bookingAddOn", BookingAddOns)
+    val bookingManualAdjustment = reference("bookingAddOn", BookingAddOns)
 }
 object TicketBookingItemAddOns : AddOnTable("ticketBookingItemAddOn", Tickets) {
-    val bookingAddOn = reference("bookingItemAddOn", BookingItemAddOns)
+    val bookingItemAddOn = reference("bookingItemAddOn", BookingItemAddOns)
 }

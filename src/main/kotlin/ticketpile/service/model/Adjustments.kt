@@ -46,24 +46,31 @@ class Discount(id: EntityID<Int>) : RelationalEntity(id) {
     val discountId : Int by PK
 }
 
-interface Adjustment {
+interface Adjustment<SubjectType : IntEntity> {
     @get:JsonProperty
     var amount : BigDecimal
 }
 
-interface DiscountAdjustment<SubjectType : IntEntity> : Adjustment {
+// This interface should be implemented for adjustments that come from
+// mapping Booking/BookingItem adjustments to Tickets.
+interface MappedAdjustment<out Source : Adjustment<*>> {
+    val sourceAdjustment : Source
+    val subject : Ticket
+}
+
+interface DiscountAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {
     var subject : SubjectType
     @get:JsonProperty
     var discount : Discount
 }
 
-interface AddOnAdjustment<SubjectType : IntEntity> : Adjustment {
+interface AddOnAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {
     var subject : SubjectType
     @get:JsonProperty
     var addOn : AddOn
 }
 
-interface ManualAdjustment<SubjectType : IntEntity> : Adjustment {
+interface ManualAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {
     var subject : SubjectType
     @get:JsonProperty
     var description : String

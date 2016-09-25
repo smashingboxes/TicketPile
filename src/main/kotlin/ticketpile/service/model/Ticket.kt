@@ -36,7 +36,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
         if(bookingItem.booking.status != "confirmed")
             return BigDecimal.ZERO
         var result = basePrice
-        for(adjustments in listOf<List<Adjustment>>(
+        for(adjustments in listOf<List<Adjustment<*>>>(
                 bookingAddOnAdjustments,
                 bookingManualAdjustments,
                 bookingDiscounts,
@@ -61,7 +61,7 @@ class PersonCategory(id: EntityID<Int>) : PrimaryEntity(id, PersonCategories) {
     var description by PersonCategories.description
 }
 
-class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>{
+class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>, MappedAdjustment<BookingAddOn>{
     companion object : IntEntityClass<TicketBookingAddOn>(TicketBookingAddOns)
     override var subject by Ticket referencedOn TicketBookingAddOns.parent
     
@@ -69,9 +69,11 @@ class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustm
     override var addOn by AddOn referencedOn TicketBookingAddOns.addon
     @get:JsonProperty
     override var amount by TicketBookingAddOns.amount
+    @get:JsonProperty
+    override var sourceAdjustment by BookingAddOn referencedOn TicketBookingAddOns.bookingAddOn
 }
 
-class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustment<Ticket> {
+class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustment<Ticket>, MappedAdjustment<BookingDiscount> {
     companion object : IntEntityClass<TicketBookingDiscount>(TicketBookingDiscounts)
     override var subject by Ticket referencedOn TicketBookingDiscounts.parent
 
@@ -79,9 +81,11 @@ class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountA
     override var discount by Discount referencedOn TicketBookingDiscounts.discount
     @get:JsonProperty
     override var amount by TicketBookingDiscounts.amount
+    @get:JsonProperty
+    override var sourceAdjustment by BookingDiscount referencedOn TicketBookingDiscounts.bookingDiscount
 }
 
-class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Ticket> {
+class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Ticket>, MappedAdjustment<BookingManualAdjustment> {
     companion object : IntEntityClass<TicketBookingManualAdjustment>(TicketBookingManualAdjustments)
     override var subject by Ticket referencedOn TicketBookingManualAdjustments.parent
 
@@ -89,9 +93,12 @@ class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), M
     override var description by TicketBookingManualAdjustments.description
     @get:JsonProperty
     override var amount by TicketBookingManualAdjustments.amount
+    @get:JsonProperty
+    override var sourceAdjustment by BookingManualAdjustment referencedOn TicketBookingManualAdjustments.bookingManualAdjustment
+
 }
 
-class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket> {
+class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>, MappedAdjustment<BookingItemAddOn> {
     companion object : IntEntityClass<TicketBookingAddOn>(TicketBookingItemAddOns)
     override var subject by Ticket referencedOn TicketBookingItemAddOns.parent
 
@@ -99,4 +106,6 @@ class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdj
     override var addOn by AddOn referencedOn TicketBookingItemAddOns.addon
     @get:JsonProperty
     override var amount by TicketBookingItemAddOns.amount
+    @get:JsonProperty
+    override var sourceAdjustment by BookingItemAddOn referencedOn TicketBookingItemAddOns.bookingItemAddOn
 }

@@ -121,16 +121,15 @@ open class DBConnection() : CommandLineRunner, Ordered {
     override fun run(vararg args : String) {
         println("Establishing TicketPile Database Connection...")
         println("DB Server: ${config.url}")
-        println("DB Driver: ${config.driver}")
         println("DB User: ${config.user}")
         
         Database.connect(getDataSource())
         println("Setting up database tables")
-        transaction {
+        transaction( statement = {
             initializeModel()
             initializeSynchronization()
             initializeSecurity()
-        }
+        }, repetitionAttempts = 0)
     }
     
     private fun getDataSource() : DataSource {
@@ -155,7 +154,6 @@ open class DBConnection() : CommandLineRunner, Ordered {
 @ConfigurationProperties(prefix = "db")
 open class DBConfig() {
     var url = ""
-    var driver = ""
     var user = ""
     var password = ""
 }

@@ -27,7 +27,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems) {
 }
 
 class BookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<BookingItem> {
-    companion object : IntEntityClass<BookingAddOn>(BookingItemAddOns)
+    companion object : IntEntityClass<BookingItemAddOn>(BookingItemAddOns)
 
     @get:JsonProperty
     val bookingAddOnId by PK

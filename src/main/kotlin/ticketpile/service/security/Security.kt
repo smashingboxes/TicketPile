@@ -14,7 +14,7 @@ import java.security.SecureRandom
  * Created by jonlatane on 9/3/16.
  */
 
-internal val authKeySize = 255
+internal val authKeySize = 128
 
 object Users : RelationalTable("user") {
     val name = varchar("name", length = 128)
