@@ -34,6 +34,12 @@ class AddOn(id: EntityID<Int>) : RelationalEntity(id) {
     var product : Product? by Product optionalReferencedOn AddOns.product
     @get:JsonProperty
     val addOnId by PK
+    var externalSource by AddOns.externalSource
+    var externalId by AddOns.externalId
+}
+
+enum class DiscountType {
+    
 }
 
 class Discount(id: EntityID<Int>) : RelationalEntity(id) {
@@ -44,6 +50,8 @@ class Discount(id: EntityID<Int>) : RelationalEntity(id) {
     var description : String by Discounts.description
     @get:JsonProperty
     val discountId : Int by PK
+    var externalSource by Discounts.externalSource
+    var externalId by Discounts.externalId
 }
 
 interface Adjustment<SubjectType : IntEntity> {
@@ -68,6 +76,8 @@ interface AddOnAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {
     var subject : SubjectType
     @get:JsonProperty
     var addOn : AddOn
+    @get:JsonProperty
+    var prompt : String
 }
 
 interface ManualAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {

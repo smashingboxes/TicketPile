@@ -28,7 +28,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
     @get:JsonProperty
     val bookingManualAdjustments by children(TicketBookingManualAdjustment)
     @get:JsonProperty
-    val bookingDiscounts by children(TicketBookingDiscount)
+    val bookingDiscountAdjustments by children(TicketBookingDiscount)
     @get:JsonProperty
     val bookingItemAddOnAdjustments by children(TicketBookingItemAddOn)
     @get:JsonProperty
@@ -39,7 +39,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
         for(adjustments in listOf<List<Adjustment<*>>>(
                 bookingAddOnAdjustments,
                 bookingManualAdjustments,
-                bookingDiscounts,
+                bookingDiscountAdjustments,
                 bookingItemAddOnAdjustments
         )) {
             for(adjustment in adjustments) {
@@ -70,6 +70,8 @@ class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustm
     @get:JsonProperty
     override var amount by TicketBookingAddOns.amount
     @get:JsonProperty
+    override var prompt by TicketBookingAddOns.prompt
+    @get:JsonProperty
     override var sourceAdjustment by BookingAddOn referencedOn TicketBookingAddOns.bookingAddOn
 }
 
@@ -99,13 +101,15 @@ class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), M
 }
 
 class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>, MappedAdjustment<BookingItemAddOn> {
-    companion object : IntEntityClass<TicketBookingAddOn>(TicketBookingItemAddOns)
+    companion object : IntEntityClass<TicketBookingItemAddOn>(TicketBookingItemAddOns)
     override var subject by Ticket referencedOn TicketBookingItemAddOns.parent
 
     @get:JsonProperty
     override var addOn by AddOn referencedOn TicketBookingItemAddOns.addon
     @get:JsonProperty
     override var amount by TicketBookingItemAddOns.amount
+    @get:JsonProperty
+    override var prompt by TicketBookingItemAddOns.prompt
     @get:JsonProperty
     override var sourceAdjustment by BookingItemAddOn referencedOn TicketBookingItemAddOns.bookingItemAddOn
 }

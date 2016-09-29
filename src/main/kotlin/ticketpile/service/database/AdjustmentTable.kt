@@ -38,4 +38,5 @@ open class ManualAdjustmentTable(singularName: String, subject : RelationalTable
 
 open class AddOnTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {
     val addon = reference("addon", AddOns)
+    val prompt = varchar("prompt", length = 512)
 }

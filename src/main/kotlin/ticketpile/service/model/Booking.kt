@@ -6,13 +6,12 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
-import java.math.BigDecimal
 
 /**
  * Created by jonlatane on 8/28/16.
  */
 
-class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings) {
+class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     companion object : IntEntityClass<Booking>(Bookings)
     /*internal val tickets : Iterable<Ticket>
             by children(Ticket, Tickets.booking)*/
@@ -45,20 +44,15 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings) {
     @get:JsonProperty
     var customer by Customer referencedOn Bookings.customer
     
-    internal val tickets : Iterable<Ticket> get() {
+    @get:JsonProperty
+    val bookingTotal = grossRevenue
+    
+    override val tickets : Iterable<Ticket> get() {
         val result = mutableListOf<Ticket>()
         items.forEach {
             it.tickets.forEach { 
                 result.add(it)
             }
-        }
-        return result
-    }
-    
-    internal val grossRevenue : BigDecimal get() {
-        var result = BigDecimal.ZERO
-        tickets.forEach {
-            result += it.grossRevenue
         }
         return result
     }
@@ -74,6 +68,8 @@ class BookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Bo
     override var addOn by AddOn referencedOn BookingAddOns.addon
     @get:JsonProperty
     override var amount by BookingAddOns.amount
+    @get:JsonProperty
+    override var prompt by BookingAddOns.prompt
     
     override var subject by Booking referencedOn BookingAddOns.parent
 }

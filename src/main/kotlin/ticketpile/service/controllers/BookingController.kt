@@ -2,9 +2,11 @@ package ticketpile.service.controllers;
 
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ticketpile.service.model.Booking
+import ticketpile.service.util.BadRequestException
 import ticketpile.service.util.transaction
 
 /**
@@ -38,6 +40,19 @@ class BookingController : AdjustmentController<Booking>(Booking) {
         return booking!!
     }
     */
+    
+    @GetMapping(
+            value = "/{bookingId}",
+            produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
+    )
+    fun getBooking(
+            @PathVariable("bookingId")
+            bookingId: Int
+    ) : Booking {
+        return transaction {
+            Booking.findById(bookingId)
+        } ?: throw BadRequestException("Booking could not be found")
+    }
 
     @GetMapping(
             value = "/all",

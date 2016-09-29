@@ -75,6 +75,13 @@ class AdvanceReservation() {
 class AdvanceAddOnSelection() {
     var addonId = -1
 	var name = ""
+    var options = emptyList<AdvanceAddOnOption>()
+}
+
+class AdvanceAddOnOption {
+    var label = ""
+    var optionID = -1
+    var price = BigDecimal.ZERO
 }
 
 class AdvanceBookingItem() {

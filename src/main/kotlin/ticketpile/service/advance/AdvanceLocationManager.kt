@@ -1,6 +1,7 @@
 package ticketpile.service.advance
 
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
@@ -27,10 +28,11 @@ class AdvanceLocationManager {
         private val dateTimeFormatter = DateTimeFormat.forPattern(
                 "yyyy-MM-dd%20HH:mm:ss"
         )
+        val syncPeriodSeconds = 5L
         
         fun getAuthKey(host:String, user:String, password:String) : String {
             val url = URL(URL(host), "/services/api20/authorize/login")
-            println("Contacting WebReserv via $url")
+            println("Contacting Advance via $url")
             val entity = HttpEntity<AdvanceAuthRequest>(
                     AdvanceAuthRequest(user, password)
             )
@@ -43,12 +45,15 @@ class AdvanceLocationManager {
             println(responseEntity.toString())
             return responseEntity.body.token
         }
+        fun toSource(host:String) : String {
+            return URL(URL(host), "/").toString()
+        }
     }
     constructor(host: String, authorizationKey: String, locationId: Int) {
         if (authorizationKey.startsWith("Bearer:")) authKey = authorizationKey.substring(7)
         else authKey = authorizationKey
         this.locationId = locationId
-        source = URL(URL(host), "/").toString()
+        source = toSource(host)
     }
 
     var source: String
@@ -65,14 +70,15 @@ class AdvanceLocationManager {
         
         val bookings = api20Request(
                 "/bookings/modified?since=${
-                    dateTimeFormatter.print(syncTask.lastRefresh)
+                    dateTimeFormatter.print(syncTask.lastRefresh.toDateTime(DateTimeZone.UTC))
                 }",
                 AdvanceModifiedBookingsResponse::class.java
         ).bookingIds
 
         return transaction {
             val importTask = AdvanceSyncTask[syncTask.id]
-            importTask.lastRefresh = DateTime(DateTimeZone.UTC).minusMinutes(2)
+            importTask.lastRefresh = DateTime(DateTimeZone.UTC)
+                    .minusSeconds(syncPeriodSeconds.toInt())
             for(bookingId in bookings) {
                 AdvanceSyncTaskBooking.new {
                     reservationId = bookingId
@@ -82,7 +88,6 @@ class AdvanceLocationManager {
             importTask
         }
     }
-    
 
     internal fun importById(
             reservationId: Int
@@ -120,12 +125,49 @@ class AdvanceLocationManager {
         booking.customer = bookingCustomer
         booking.status = reservation.bookingStatus
 
+        // First remove all booking items and adjustments
+        // from the target booking
+        prepareImport(booking)
+        
+        // Import fresh versions of all this data
         importBookingItems(booking, reservation)
+        importDiscounts(booking, reservation)
+        importBookingAddOns(booking, reservation)
+        importManualAdjustments(booking, reservation)
         
         // After importing data for the booking, transform
         // all of the adjustments on it onto its Tickets
         TicketAdjustmentTransform.transform(booking)
         return booking
+    }
+
+    private fun importDiscounts(
+            targetBooking: Booking,
+            reservation: AdvanceReservation
+    ) {
+        //TODO
+    }
+    
+    private fun importBookingAddOns(
+            targetBooking: Booking,
+            reservation: AdvanceReservation
+    ) {
+        //TODO - these do not affect price for TR
+    }
+
+    private fun importManualAdjustments(
+            targetBooking: Booking,
+            reservation: AdvanceReservation
+    ) {
+        reservation.lineTotals.filter {
+            it.type in arrayOf(2000,2100)
+        }.forEach {
+            BookingManualAdjustment.new {
+                subject = targetBooking
+                amount = it.price
+                description = it.label
+            }
+        }
     }
     
     private fun importCustomer(advanceCustomer : AdvanceCustomer) : Customer {
@@ -192,7 +234,7 @@ class AdvanceLocationManager {
     private fun importProduct(
             wrProduct: AdvanceProduct
     ) {
-        println("WebReserv ProductID: ${wrProduct.productID}")
+        println("Advance ProductID: ${wrProduct.productID}")
         val product = Product.find {
             (Products.externalSource eq source) and
                     (Products.externalId eq wrProduct.productID)
@@ -205,15 +247,46 @@ class AdvanceLocationManager {
         product.name = wrProduct.name
         product.description = wrProduct.shortDescription
     }
+    
+    private fun prepareImport(booking : Booking) {
+        booking.items.forEach { 
+            bookingItem ->
+            bookingItem.tickets.forEach {
+                ticket ->
+                TicketBookingAddOns.deleteWhere { 
+                    TicketBookingAddOns.parent eq ticket.id
+                }
+                TicketBookingDiscounts.deleteWhere {
+                    TicketBookingDiscounts.parent eq ticket.id
+                }
+                TicketBookingManualAdjustments.deleteWhere {
+                    TicketBookingManualAdjustments.parent eq ticket.id
+                }
+                TicketBookingItemAddOns.deleteWhere {
+                    TicketBookingItemAddOns.parent eq ticket.id
+                }
+                ticket.delete()
+            }
+            BookingItemAddOns.deleteWhere { 
+                BookingItemAddOns.parent eq bookingItem.id
+            }
+            bookingItem.delete()
+        }
+        BookingAddOns.deleteWhere {
+            BookingAddOns.parent eq booking.id
+        }
+        BookingDiscounts.deleteWhere {
+            BookingDiscounts.parent eq booking.id
+        }
+        BookingManualAdjustments.deleteWhere {
+            BookingManualAdjustments.parent eq booking.id
+        }
+    }
 
     private fun importBookingItems(
             targetBooking: Booking,
             reservation: AdvanceReservation
     ) {
-        targetBooking.items.forEach { 
-            it.tickets.forEach(Ticket::delete)
-            it.delete()
-        }
         reservation.bookingItems.forEach {
             wrBookingItem: AdvanceBookingItem ->
             val targetEvent = importAvailability(wrBookingItem.availabilityID)
@@ -228,7 +301,34 @@ class AdvanceLocationManager {
             }
             bookingItem.booking = targetBooking
             bookingItem.event = targetEvent
+            importBookingItemAddOns(wrBookingItem, bookingItem)
             importTickets(wrBookingItem, bookingItem)
+        }
+    }
+    
+    private fun importBookingItemAddOns(
+            wrBookingItem: AdvanceBookingItem,
+            bookingItem: BookingItem
+    ) {
+        wrBookingItem.addonSelections.forEach {
+            advanceAddOnSelection ->
+            advanceAddOnSelection.options.forEach { 
+                option ->
+                val addOnSelection = AddOn.find {
+                    (AddOns.externalSource eq source) and
+                            (AddOns.externalId eq option.optionID)
+                }.firstOrNull() ?: AddOn.new {
+                    name = option.label
+                    externalSource = source
+                    externalId = option.optionID
+                }
+                BookingItemAddOn.new {
+                    addOn = addOnSelection
+                    prompt = advanceAddOnSelection.name
+                    amount = option.price
+                    subject = bookingItem
+                }
+            }
         }
     }
     
@@ -237,6 +337,7 @@ class AdvanceLocationManager {
             targetBookingItem: BookingItem
     ) {
         val personCategoryTicketPrices = mutableMapOf<PersonCategory, BigDecimal>()
+        //var numTickets
         wrBookingItem.lineTotals.filter { it.type == 1101 }.forEach { 
             lineTotal ->
             val personCategory = PersonCategory.find {
@@ -310,7 +411,7 @@ class AdvanceLocationManager {
             klass: Class<T>
     ): T {
         val url = URL(URL(source), "/services/api20$path")
-        println("Contacting WebReserv via $url")
+        println("Contacting Advance via $url")
         val headers = HttpHeaders()
         headers.put("Bearer", listOf(authKey))
         val entity = HttpEntity<String>("parameters", headers)

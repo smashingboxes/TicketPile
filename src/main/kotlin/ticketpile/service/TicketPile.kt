@@ -25,6 +25,7 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
+import ticketpile.service.advance.AdvanceLocationManager
 import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
@@ -158,18 +159,29 @@ open class DBConfig() {
     var password = ""
 }
 
+fun wrapTask(task: () -> Unit, taskName: String) : () -> Unit {
+    return {
+        try {
+            task()
+        } catch(t: Throwable) {
+            println("$taskName error: ${t.printStackTrace()}")
+        }
+    }
+}
 
 @Component
 open class BackgroundJobs() : CommandLineRunner, Ordered {
     override fun run(vararg args : String) {
         val scheduler = Executors.newScheduledThreadPool(13)
         scheduler.scheduleAtFixedRate(
-                bookingQueueSync, 0, 5, TimeUnit.SECONDS
+                wrapTask(bookingQueueSync, "Booking Queue Sync"),
+                0, AdvanceLocationManager.syncPeriodSeconds, TimeUnit.SECONDS
         )
         // Schedule multiple tasks for booking sync
         for(offset in 0..5) {
             scheduler.scheduleAtFixedRate(
-                    individualBookingSync, 0, 250, TimeUnit.MILLISECONDS
+                    wrapTask(individualBookingSync, "Individual Booking Sync"),
+                    0, 250, TimeUnit.MILLISECONDS
             )
         }
     }

@@ -1,8 +1,10 @@
 package ticketpile.service.advance
 
 import org.jetbrains.exposed.sql.and
+import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.client.HttpClientErrorException
+import ticketpile.service.database.Bookings
 import ticketpile.service.model.Booking
 import ticketpile.service.util.BadRequestException
 import ticketpile.service.util.transaction
@@ -15,21 +17,6 @@ import ticketpile.service.util.transaction
 @RestController
 @RequestMapping(value = "/advance")
 open class AdvanceReservationController {
-    @PostMapping(value = "/singleImport")
-    fun singleImport(
-            @RequestParam(value = "advanceHost", required = true)
-            host: String,
-            @RequestParam(value = "advanceAuthKey", required = true)
-            authorizationKey: String,
-            @RequestParam(value = "advanceLocationId", required = true)
-            locationId: Int,
-            @RequestParam(value = "reservationId", required = true)
-            reservationId: Int
-    ): Booking {
-        return AdvanceLocationManager(host, authorizationKey, locationId)
-                .importById(reservationId)
-    }
-    
     @PostMapping(value = "/synchronizeLocation")
     fun synchronizeLocation(
             @RequestParam(value = "advanceHost", required = true)
@@ -82,5 +69,50 @@ open class AdvanceReservationController {
         return transaction {
             AdvanceSyncTask.all().map {it}
         }
+    }
+
+    @PostMapping(value = "/queueBooking/{advanceBookingId}")
+    fun queueBooking(
+            @PathVariable("advanceBookingId")
+            advanceBookingId: Int,
+            @RequestParam(value = "advanceHost", required = true)
+            host: String,
+            @RequestParam(value = "advanceLocationId", required = true)
+            locationId: Int
+    ) : AdvanceSyncTask {
+        val source = AdvanceLocationManager.toSource(host)
+        val task = transaction {
+            val importTask = AdvanceSyncTask.find {
+                (AdvanceSyncTasks.advanceHost eq source)
+                (AdvanceSyncTasks.advanceLocationId eq locationId)
+            }.firstOrNull() ?: throw BadRequestException("Synchronization is not configured " +
+                    "for this location and host.")
+            AdvanceSyncTaskBooking.new {
+                reservationId = advanceBookingId
+                task = importTask
+            }
+            importTask
+        }
+        return task
+    }
+
+
+    @GetMapping(
+            value = "/booking/{advanceBookingId}",
+            produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
+    )
+    fun getBooking(
+            @PathVariable("advanceBookingId")
+            advanceBookingId: Int,
+            @RequestParam(value = "advanceHost", required = true)
+            host: String
+    ) : Booking {
+        val source = AdvanceLocationManager.toSource(host)
+        return transaction {
+            Booking.find {
+                (Bookings.externalSource eq source) and 
+                        (Bookings.externalId eq advanceBookingId)
+            }.firstOrNull()
+        } ?: throw BadRequestException("Booking could not be found")
     }
 }

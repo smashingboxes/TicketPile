@@ -103,7 +103,10 @@ val bookingQueueSync = {
     println("Booking Queue sync")
     val tasks = getActiveTasks()
     tasks.forEach { task ->
-        if (task.bookingsLeft.empty()) {
+        val shouldRefresh = transaction {
+            task.bookingsLeft.empty()
+        }
+        if (shouldRefresh) {
             println("Looking for updated bookings on ${task.advanceHost} " +
                     "for location ${task.advanceLocationId} as user " +
                     "${task.advanceUser} and token ${task.advanceAuthKey}.")
@@ -115,7 +118,7 @@ val bookingQueueSync = {
             try {
                 manager.synchronize(task)
             } catch(t: HttpClientErrorException) {
-                if(t.rawStatusCode == 401)
+                if (t.rawStatusCode == 401)
                     task.updateAuthentication()
             }
         }
