@@ -310,41 +310,6 @@ class AdvanceLocationManager {
         product.name = aProduct.name
         product.description = aProduct.shortDescription
     }
-    
-    private fun prepareImport(booking : Booking) {
-        booking.items.forEach { 
-            bookingItem ->
-            bookingItem.tickets.forEach {
-                ticket ->
-                TicketBookingAddOns.deleteWhere { 
-                    TicketBookingAddOns.parent eq ticket.id
-                }
-                TicketBookingDiscounts.deleteWhere {
-                    TicketBookingDiscounts.parent eq ticket.id
-                }
-                TicketBookingManualAdjustments.deleteWhere {
-                    TicketBookingManualAdjustments.parent eq ticket.id
-                }
-                TicketBookingItemAddOns.deleteWhere {
-                    TicketBookingItemAddOns.parent eq ticket.id
-                }
-                ticket.delete()
-            }
-            BookingItemAddOns.deleteWhere { 
-                BookingItemAddOns.parent eq bookingItem.id
-            }
-            bookingItem.delete()
-        }
-        BookingAddOns.deleteWhere {
-            BookingAddOns.parent eq booking.id
-        }
-        BookingDiscounts.deleteWhere {
-            BookingDiscounts.parent eq booking.id
-        }
-        BookingManualAdjustments.deleteWhere {
-            BookingManualAdjustments.parent eq booking.id
-        }
-    }
 
     private fun importBookingItems(
             targetBooking: Booking,
@@ -359,8 +324,6 @@ class AdvanceLocationManager {
                 externalSource = source
                 externalId = aBookingItem.bookingItemID
             }
-            bookingItem.booking = targetBooking
-            bookingItem.event = targetEvent
             importBookingItemAddOns(aBookingItem, bookingItem)
             importTickets(aBookingItem, bookingItem)
         }
