@@ -23,20 +23,18 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
     var personCategory by PersonCategory referencedOn Tickets.personCategory
     @get:JsonProperty
     var basePrice by Tickets.basePrice
-    @get:JsonProperty
-    val bookingAddOnAdjustments by children(TicketBookingAddOn)
-    @get:JsonProperty
-    val bookingManualAdjustments by children(TicketBookingManualAdjustment)
-    @get:JsonProperty
-    val bookingDiscountAdjustments by children(TicketBookingDiscount)
-    @get:JsonProperty
-    val bookingItemAddOnAdjustments by children(TicketBookingItemAddOn)
+    //@get:JsonProperty
+    val bookingAddOnAdjustments by TicketBookingAddOn referrersOn TicketBookingAddOns.parent
+    //@get:JsonProperty
+    val bookingManualAdjustments by TicketBookingManualAdjustment referrersOn TicketBookingManualAdjustments.parent
+    //@get:JsonProperty
+    val bookingDiscountAdjustments by TicketBookingDiscount referrersOn TicketBookingDiscounts.parent
+    //@get:JsonProperty
+    val bookingItemAddOnAdjustments by TicketBookingItemAddOn referrersOn TicketBookingItemAddOns.parent
     @get:JsonProperty
     val grossRevenue : BigDecimal get() {
-        if(bookingItem.booking.status != "confirmed")
-            return BigDecimal.ZERO
         var result = basePrice
-        for(adjustments in listOf<List<Adjustment<*>>>(
+        for(adjustments in listOf<Iterable<Adjustment<*>>>(
                 bookingAddOnAdjustments,
                 bookingManualAdjustments,
                 bookingDiscountAdjustments,
@@ -45,6 +43,14 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
             for(adjustment in adjustments) {
                 result += adjustment.amount
             }
+        }
+        return result
+    }
+    @get:JsonProperty
+    val discountedPrice : BigDecimal get() {
+        var result = basePrice
+        for(adjustment in bookingDiscountAdjustments) {
+            result += adjustment.amount
         }
         return result
     }
@@ -71,7 +77,7 @@ class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustm
     override var amount by TicketBookingAddOns.amount
     @get:JsonProperty
     override var prompt by TicketBookingAddOns.prompt
-    @get:JsonProperty
+    //@get:JsonProperty
     override var sourceAdjustment by BookingAddOn referencedOn TicketBookingAddOns.bookingAddOn
 }
 
@@ -83,7 +89,7 @@ class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountA
     override var discount by Discount referencedOn TicketBookingDiscounts.discount
     @get:JsonProperty
     override var amount by TicketBookingDiscounts.amount
-    @get:JsonProperty
+    //@get:JsonProperty
     override var sourceAdjustment by BookingDiscount referencedOn TicketBookingDiscounts.bookingDiscount
 }
 
@@ -95,7 +101,7 @@ class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), M
     override var description by TicketBookingManualAdjustments.description
     @get:JsonProperty
     override var amount by TicketBookingManualAdjustments.amount
-    @get:JsonProperty
+    //@get:JsonProperty
     override var sourceAdjustment by BookingManualAdjustment referencedOn TicketBookingManualAdjustments.bookingManualAdjustment
 
 }
@@ -110,6 +116,6 @@ class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdj
     override var amount by TicketBookingItemAddOns.amount
     @get:JsonProperty
     override var prompt by TicketBookingItemAddOns.prompt
-    @get:JsonProperty
+    //@get:JsonProperty
     override var sourceAdjustment by BookingItemAddOn referencedOn TicketBookingItemAddOns.bookingItemAddOn
 }

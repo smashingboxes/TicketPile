@@ -1,5 +1,7 @@
 package ticketpile.service.database
 
+import ticketpile.service.model.DiscountBasis
+
 
 /**
  * JetBrains Exposed DAO structure for TicketPile.
@@ -10,7 +12,8 @@ package ticketpile.service.database
 object Bookings : RelationalTable("booking") {
     val code = varchar("name", length = 128).index()
     val status = varchar("status", length = 128).index()
-    val customer = reference("customer", Customers)
+    val customer = reference("customer", Customers).index()
+    val matchesExternal = bool("matchesExternal").default(false).index()
 }
 
 object Events : RelationalTable("event") {
@@ -25,7 +28,7 @@ object BookingItems : RelationalTable("bookingItem") {
     val booking = reference("booking", Bookings)
 }
 
-object Tickets : ReferenceTable("tickets", BookingItems) {
+object Tickets : ReferenceTable("ticket", BookingItems) {
     val personCategory = reference("personCategory", PersonCategories)
     val basePrice = decimal("baseprice", precision = 65, scale = 30)
     val code = varchar("code", length = 128)
@@ -50,8 +53,17 @@ object AddOns : RelationalTable("addon") {
 object Discounts : RelationalTable("discount") {
     val name = varchar("name", length = 128)
     val description = varchar("description", length = 1024)
+    val basis = enumeration("basis", DiscountBasis::class.java)
     //val percentOff = decimal("percentOff", precision = 16, scale = 16).nullable()
     //val discountAmount = decimal("discountAmount", precision = 16, scale = 16).nullable()
+}
+
+object DiscountPersonCategories : ReferenceTable("discountPersonCategory", Discounts) {
+    val personCategory = reference("personCategory", PersonCategories)
+}
+
+object DiscountProducts : ReferenceTable("discountProduct", Discounts) {
+    val product = reference("product", Products)
 }
 
 object Customers : RelationalTable("customer") {
@@ -88,7 +100,7 @@ object TicketBookingDiscounts : DiscountTable("ticketBookingDiscount", Tickets) 
     val bookingDiscount = reference("bookingDiscount", BookingDiscounts)
 }
 object TicketBookingManualAdjustments : ManualAdjustmentTable("ticketBookingManualAdjustment", Tickets) {
-    val bookingManualAdjustment = reference("bookingAddOn", BookingAddOns)
+    val bookingManualAdjustment = reference("bookingManualAdjustment", BookingManualAdjustments)
 }
 object TicketBookingItemAddOns : AddOnTable("ticketBookingItemAddOn", Tickets) {
     val bookingItemAddOn = reference("bookingItemAddOn", BookingItemAddOns)

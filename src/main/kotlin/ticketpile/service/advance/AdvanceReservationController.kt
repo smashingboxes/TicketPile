@@ -8,6 +8,7 @@ import ticketpile.service.database.Bookings
 import ticketpile.service.model.Booking
 import ticketpile.service.util.BadRequestException
 import ticketpile.service.util.transaction
+import java.sql.Connection
 
 /**
  * Controller capable of receiving Advance reservations and dumping
@@ -17,12 +18,51 @@ import ticketpile.service.util.transaction
 @RestController
 @RequestMapping(value = "/advance")
 open class AdvanceReservationController {
+    @PostMapping(value = "/importBooking")
+    fun importBooking(
+            @RequestParam(value = "advanceHost", required = true)
+            host: String,
+            @RequestParam(value = "advanceUser", required = false)
+            advanceUser: String?,
+            @RequestParam(value = "advancePassword", required = false)
+            advancePassword: String?,
+            @RequestParam(value = "advanceLocationId", required = true)
+            locationId: Int,
+            @RequestParam(value = "advanceReservationId", required = true)
+            reservationId: Int
+    ) : Booking {
+        val authKey: String
+        // First ensure any supplied user/password was correct; discard any given auth key.
+        if(advanceUser != null && advancePassword != null) {
+            try {
+                authKey = AdvanceLocationManager.getAuthKey(host, advanceUser, advancePassword)
+            } catch(e : HttpClientErrorException) {
+                throw BadRequestException("Unable to authenticate with user/password", e)
+            }
+        } else {
+            throw BadRequestException("Either a valid auth key or a valid user/password must be provided. " +
+                    "An invalid user/password is never acceptable.")
+        }
+
+        val manager = AdvanceLocationManager(host, authKey, locationId)
+        val advanceReservation = manager.getAdvanceBooking(reservationId)
+        transaction {
+            manager.importProducts()
+            manager.importPersonCategories()
+            manager.importDiscountRules(advanceReservation)
+        }
+        return transaction(statement =  {
+            println("Importing booking $reservationId from $host")
+            val result = manager.importByAdvanceReservation(advanceReservation)
+            println("Returning Spring controller result")
+            result
+        }, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
+    }
+    
     @PostMapping(value = "/synchronizeLocation")
     fun synchronizeLocation(
             @RequestParam(value = "advanceHost", required = true)
             host: String,
-            @RequestParam(value = "advanceAuthKey", required = false)
-            authorizationKey: String?,
             @RequestParam(value = "advanceUser", required = false)
             advanceUser: String?,
             @RequestParam(value = "advancePassword", required = false)
@@ -38,8 +78,6 @@ open class AdvanceReservationController {
             } catch(e : HttpClientErrorException) {
                 throw BadRequestException("Unable to authenticate with user/password", e)
             }
-        } else if(authorizationKey != null) {
-            authKey = authorizationKey
         } else {
             throw BadRequestException("Either a valid auth key or a valid user/password must be provided. " +
                     "An invalid user/password is never acceptable.")
@@ -61,11 +99,11 @@ open class AdvanceReservationController {
             importTask.authenticated = true
             importTask
         }
-        return manager.synchronize(task)
+        return task
     }
     
     @GetMapping(value = "/synchronizationQueues")
-    fun synchronizationQueues() : Iterable<AdvanceSyncTask> {
+    fun synchronizationQueues() : List<AdvanceSyncTask> {
         return transaction {
             AdvanceSyncTask.all().map {it}
         }
@@ -114,5 +152,17 @@ open class AdvanceReservationController {
                         (Bookings.externalId eq advanceBookingId)
             }.firstOrNull()
         } ?: throw BadRequestException("Booking could not be found")
+    }
+
+    @GetMapping(
+            value = "/booking/nonMatching",
+            produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
+    )
+    fun getBooking() : List<Booking> {
+        return transaction {
+            Booking.find {
+                Bookings.matchesExternal eq false
+            }.map { it }
+        }
     }
 }

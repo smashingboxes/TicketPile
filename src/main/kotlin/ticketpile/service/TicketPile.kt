@@ -33,6 +33,8 @@ import ticketpile.service.database.initializeModel
 import ticketpile.service.security.initializeSecurity
 import ticketpile.service.springconfig.apiTokenHeader
 import ticketpile.service.util.transaction
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.HttpsURLConnection
@@ -164,7 +166,9 @@ fun wrapTask(task: () -> Unit, taskName: String) : () -> Unit {
         try {
             task()
         } catch(t: Throwable) {
-            println("$taskName error: ${t.printStackTrace()}")
+            val sw = StringWriter()
+            t.printStackTrace(PrintWriter(sw))
+            println("$taskName error: $sw")
         }
     }
 }
@@ -178,10 +182,10 @@ open class BackgroundJobs() : CommandLineRunner, Ordered {
                 0, AdvanceLocationManager.syncPeriodSeconds, TimeUnit.SECONDS
         )
         // Schedule multiple tasks for booking sync
-        for(offset in 0..5) {
+        for(offset in 1..3) {
             scheduler.scheduleAtFixedRate(
                     wrapTask(individualBookingSync, "Individual Booking Sync"),
-                    0, 250, TimeUnit.MILLISECONDS
+                    0, 100, TimeUnit.MILLISECONDS
             )
         }
     }

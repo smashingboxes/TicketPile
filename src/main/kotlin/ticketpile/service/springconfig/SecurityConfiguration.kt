@@ -13,9 +13,9 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter
 import org.springframework.web.filter.OncePerRequestFilter
-import ticketpile.service.security.AuthKey
-import ticketpile.service.security.AuthKeys
 import ticketpile.service.security.User
+import ticketpile.service.security.UserAuthKey
+import ticketpile.service.security.UserAuthKeys
 import ticketpile.service.util.transaction
 import javax.servlet.FilterChain
 import javax.servlet.http.HttpServletRequest
@@ -77,10 +77,9 @@ class BearerTokenFilter() : OncePerRequestFilter() {
     ) {
         val bearer : String = request?.getHeader(apiTokenHeader) ?: ""
         val user = transaction {
-            AuthKey.find {
-                AuthKeys.authKey eq bearer
+            UserAuthKey.find {
+                UserAuthKeys.authKey eq bearer
             }.firstOrNull()?.user
-                    //?: throw AuthenticationException("Please provide a valid Bearer token in your header.")
         }
 
         val auth = BearerToken(user)

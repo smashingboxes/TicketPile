@@ -28,9 +28,9 @@ class TransactionSerializer(val serializer : JsonSerializer<Any>) : JsonSerializ
             jsonGenerator : JsonGenerator,
             serializerProvider : SerializerProvider){
         if(o is Entity<*> && TransactionManager.currentOrNull() == null) {
-            transaction {
+            transaction(statement = {
                 serializer.serialize(o, jsonGenerator, serializerProvider)
-            }
+            }, logging = false)
         } else {
             serializer.serialize(o, jsonGenerator, serializerProvider)
         }

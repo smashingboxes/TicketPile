@@ -79,7 +79,7 @@ class AdvanceAddOnSelection() {
 }
 
 class AdvanceAddOnOption {
-    var label = ""
+    var label :String? = ""
     var optionID = -1
     var price = BigDecimal.ZERO
 }
@@ -128,7 +128,15 @@ class AdvancePayment() {
 }
 
 class AdvancePricing() {
-    
+    var totalAmount = BigDecimal.ZERO
+    var priceAdjustments = emptyList<AdvancePriceAdjustment>()
+}
+
+class AdvancePriceAdjustment() {
+    var amount = BigDecimal.ZERO
+    var label = ""
+    var promotionID : Int? = null
+    var type = 0
 }
 
 class AdvanceSalesChannel() {
@@ -167,4 +175,28 @@ class AdvanceProduct() {
     var productID = -1
     var name = ""
     var shortDescription = ""
+}
+
+class AdvancePromotionResponse() {
+    var promotion = AdvancePromotion()
+}
+
+class AdvancePromotion() {
+    var promotionCode = ""
+    var description : String? = ""
+    var calcbasis = "perperson"
+    var associations = emptyList<AdvancePromotionAssociation>()
+    var personCategories = emptyList<AdvancePromotionPersonCategory>()
+}
+
+class AdvancePromotionPersonCategory() {
+    var label : String? = null
+    var personCategoryIndex: Int? = null
+    var selected = false
+}
+
+class AdvancePromotionAssociation() {
+    var label: String = ""
+    var productID: Int? = null
+    var selected = false
 }

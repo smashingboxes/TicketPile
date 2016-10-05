@@ -16,6 +16,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.net.URI
 import java.net.URL
+import java.sql.Connection
 
 /**
  * Handles per-location imports of Advance API20 bookings.
@@ -75,7 +76,7 @@ class AdvanceLocationManager {
                 AdvanceModifiedBookingsResponse::class.java
         ).bookingIds
 
-        return transaction {
+        return transaction(statement = {
             val importTask = AdvanceSyncTask[syncTask.id]
             importTask.lastRefresh = DateTime(DateTimeZone.UTC)
                     .minusSeconds(syncPeriodSeconds.toInt())
@@ -86,22 +87,7 @@ class AdvanceLocationManager {
                 }
             }
             importTask
-        }
-    }
-
-    internal fun importById(
-            reservationId: Int
-    ): Booking {
-        val reservation = getAdvanceBooking(reservationId)
-        println(reservation.bookingCode)
-
-        var result: Booking? = null
-        transaction {
-            importProducts()
-            importPersonCategories()
-            result = importByAdvanceReservation(reservation)
-        }
-        return result!!
+        }, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
     }
     
     fun getAdvanceBooking(reservationId: Int) : AdvanceReservation {
@@ -111,41 +97,108 @@ class AdvanceLocationManager {
     }
     
     fun importByAdvanceReservation(reservation:AdvanceReservation) : Booking {
-        val bookingCustomer = importCustomer(reservation.customer)
         
-        val booking = Booking.find {
+        //Delete the booking if it already exists.
+        Booking.find {
             (Bookings.externalSource eq source) and
                     (Bookings.externalId eq reservation.bookingID)
-        }.firstOrNull() ?: Booking.new {
+        }.firstOrNull()?.delete()
+
+        val bookingCustomer = importCustomer(reservation.customer)
+        val booking = Booking.new {
             code = reservation.bookingCode
             externalId = reservation.bookingID
             externalSource = source
             customer = bookingCustomer
+            status = reservation.bookingStatus
         }
-        booking.customer = bookingCustomer
-        booking.status = reservation.bookingStatus
-
-        // First remove all booking items and adjustments
-        // from the target booking
-        prepareImport(booking)
-        
-        // Import fresh versions of all this data
         importBookingItems(booking, reservation)
         importDiscounts(booking, reservation)
         importBookingAddOns(booking, reservation)
         importManualAdjustments(booking, reservation)
-        
-        // After importing data for the booking, transform
-        // all of the adjustments on it onto its Tickets
+
         TicketAdjustmentTransform.transform(booking)
+        
+        booking.matchesExternal = (booking.bookingTotal - reservation.pricing.totalAmount) < BigDecimal(0.001)
         return booking
+    }
+
+    fun importDiscountRules(reservation : AdvanceReservation) {
+        reservation.pricing.priceAdjustments.filter{it.type == 1500}
+                .forEach{
+                    aDiscount ->
+                    importDiscount(aDiscount.promotionID!!)
+                }
+    }
+    private fun importDiscount(
+            promotionId: Int
+    ) {
+        val aDiscount = api20Request(
+                "/promotions/$promotionId?promotionID=$promotionId",
+                AdvancePromotionResponse::class.java
+        ).promotion
+        val calcbasis = DiscountBasis.valueOf(aDiscount.calcbasis.toUpperCase())
+        transaction {
+            val tDiscount = Discount.find { 
+                (Discounts.externalSource eq source) and 
+                        (Discounts.externalId eq promotionId)
+            }.firstOrNull() ?: Discount.new {
+                externalSource = source
+                externalId = promotionId
+                name = aDiscount.promotionCode
+                description = aDiscount.description ?: ""
+                basis = calcbasis
+            }
+            tDiscount.name = aDiscount.promotionCode
+            tDiscount.description = aDiscount.description ?: ""
+            DiscountPersonCategories.deleteWhere { 
+                DiscountPersonCategories.parent eq tDiscount.id
+            }
+            DiscountProducts.deleteWhere { 
+                DiscountProducts.parent eq tDiscount.id
+            }
+            aDiscount.associations.filter{
+                it.productID != null
+                && it.selected == true
+            }.forEach { 
+                association ->
+                val tProduct = getProduct(association.productID!!)!!
+                DiscountProduct.new {
+                    discount = tDiscount
+                    product = tProduct
+                }
+            }
+            aDiscount.personCategories.filter {
+                it.label != null
+                && it.selected == true
+            }.forEach {
+                category ->
+                val tCategory = getPersonCategory(category.personCategoryIndex!!)!!
+                DiscountPersonCategory.new {
+                    discount = tDiscount
+                    personCategory = tCategory
+                }
+            }
+        }
     }
 
     private fun importDiscounts(
             targetBooking: Booking,
             reservation: AdvanceReservation
     ) {
-        //TODO
+        reservation.pricing.priceAdjustments.filter{it.type == 1500}
+        .forEach{
+            aDiscount ->
+            val discountUsed = Discount.find { 
+                (Discounts.externalSource eq source) and 
+                        (Discounts.externalId eq aDiscount.promotionID)
+            }.first()
+            BookingDiscount.new {
+                booking = targetBooking
+                amount = aDiscount.amount
+                discount = discountUsed
+            }
+        }
     }
     
     private fun importBookingAddOns(
@@ -200,52 +253,62 @@ class AdvanceLocationManager {
         return (10 * locationId) + personCategoryIndex
     }
 
-    private fun importPersonCategories() {
+    fun importPersonCategories() {
         val personCategoryResponse = api20Request(
                 "/personcategories?merchantID=$locationId",
                 AdvancePersonCategoryResponse::class.java)
         personCategoryResponse.personCategories.forEach {
-            wrPersonCategory: AdvancePersonCategory ->
-            val externalPCId = getExternalPersonCategoryId(wrPersonCategory.personCategoryIndex)
-            val personCategory = PersonCategory.find {
-                (PersonCategories.externalSource eq source) and
-                        (PersonCategories.externalId eq externalPCId)
-            }.firstOrNull() ?: PersonCategory.new {
+            aPersonCategory: AdvancePersonCategory ->
+            val externalPCId = getExternalPersonCategoryId(aPersonCategory.personCategoryIndex)
+            val personCategory = getPersonCategory(aPersonCategory.personCategoryIndex) 
+                    ?: PersonCategory.new {
                 externalId = externalPCId
                 externalSource = source
-                name = wrPersonCategory.label ?: "unnamed"
-                description = wrPersonCategory.categoryDescription
+                name = aPersonCategory.label ?: "unnamed"
+                description = aPersonCategory.categoryDescription
             }
-            personCategory.name = wrPersonCategory.label ?: "unnamed"
-            personCategory.description = wrPersonCategory.categoryDescription
+            personCategory.name = aPersonCategory.label ?: "unnamed"
+            personCategory.description = aPersonCategory.categoryDescription
         }
     }
 
-    private fun importProducts() {
+    fun importProducts() {
         val productsResponse = api20Request(
                 "/merchants/$locationId/products?merchantID=$locationId",
                 AdvanceProductsReponse::class.java)
         productsResponse.products.forEach {
-            wrProduct: AdvanceProduct ->
-            importProduct(wrProduct)
+            aProduct: AdvanceProduct ->
+            importProduct(aProduct)
         }
+    }
+    
+    private fun getProduct(productId : Int) : Product? {
+        return Product.find {
+            (Products.externalSource eq source) and
+                    (Products.externalId eq productId)
+        }.firstOrNull()
+    }
+
+    private fun getPersonCategory(personCategoryIndex : Int) : PersonCategory? {
+        return PersonCategory.find {
+            (PersonCategories.externalSource eq source) and
+                    (PersonCategories.externalId eq getExternalPersonCategoryId(personCategoryIndex))
+        }.firstOrNull()
     }
 
     private fun importProduct(
-            wrProduct: AdvanceProduct
+            aProduct: AdvanceProduct
     ) {
-        println("Advance ProductID: ${wrProduct.productID}")
-        val product = Product.find {
-            (Products.externalSource eq source) and
-                    (Products.externalId eq wrProduct.productID)
-        }.firstOrNull() ?: Product.new {
-            externalId = wrProduct.productID
+        println("Advance ProductID: ${aProduct.productID}")
+        val product = getProduct(aProduct.productID)
+                ?: Product.new {
+            externalId = aProduct.productID
             externalSource = source
-            name = wrProduct.name
-            description = wrProduct.shortDescription
+            name = aProduct.name
+            description = aProduct.shortDescription
         }
-        product.name = wrProduct.name
-        product.description = wrProduct.shortDescription
+        product.name = aProduct.name
+        product.description = aProduct.shortDescription
     }
     
     private fun prepareImport(booking : Booking) {
@@ -288,37 +351,36 @@ class AdvanceLocationManager {
             reservation: AdvanceReservation
     ) {
         reservation.bookingItems.forEach {
-            wrBookingItem: AdvanceBookingItem ->
-            val targetEvent = importAvailability(wrBookingItem.availabilityID)
-            val bookingItem = BookingItem.find {
-                (BookingItems.externalSource eq source) and
-                        (BookingItems.externalId eq wrBookingItem.bookingItemID)
-            }.firstOrNull() ?: BookingItem.new {
+            aBookingItem: AdvanceBookingItem ->
+            val targetEvent = importAvailability(aBookingItem.availabilityID)
+            val bookingItem = BookingItem.new {
                 booking = targetBooking
                 event = targetEvent
                 externalSource = source
-                externalId = wrBookingItem.bookingItemID
+                externalId = aBookingItem.bookingItemID
             }
             bookingItem.booking = targetBooking
             bookingItem.event = targetEvent
-            importBookingItemAddOns(wrBookingItem, bookingItem)
-            importTickets(wrBookingItem, bookingItem)
+            importBookingItemAddOns(aBookingItem, bookingItem)
+            importTickets(aBookingItem, bookingItem)
         }
     }
     
     private fun importBookingItemAddOns(
-            wrBookingItem: AdvanceBookingItem,
+            aBookingItem: AdvanceBookingItem,
             bookingItem: BookingItem
     ) {
-        wrBookingItem.addonSelections.forEach {
+        aBookingItem.addonSelections.forEach {
             advanceAddOnSelection ->
-            advanceAddOnSelection.options.forEach { 
+            advanceAddOnSelection.options.filter {
+                it.label != null
+            }.forEach {
                 option ->
                 val addOnSelection = AddOn.find {
                     (AddOns.externalSource eq source) and
                             (AddOns.externalId eq option.optionID)
                 }.firstOrNull() ?: AddOn.new {
-                    name = option.label
+                    name = option.label!!
                     externalSource = source
                     externalId = option.optionID
                 }
@@ -333,41 +395,52 @@ class AdvanceLocationManager {
     }
     
     private fun importTickets(
-            wrBookingItem: AdvanceBookingItem,
+            aBookingItem: AdvanceBookingItem,
             targetBookingItem: BookingItem
     ) {
         val personCategoryTicketPrices = mutableMapOf<PersonCategory, BigDecimal>()
-        //var numTickets
-        wrBookingItem.lineTotals.filter { it.type == 1101 }.forEach { 
+        var numTickets = 0
+        aBookingItem.lineTotals.filter { it.type == 1101 }.forEach { 
             lineTotal ->
             val personCategory = PersonCategory.find {
                 (PersonCategories.externalSource eq source) and (PersonCategories.name eq lineTotal.label)
             }.first()
+            numTickets += lineTotal.quantity
             val ticketPrice = lineTotal.price.divide(BigDecimal(lineTotal.quantity), RoundingMode.HALF_UP)
             personCategoryTicketPrices[personCategory] = ticketPrice
         }
-        wrBookingItem.lineTotals.filter { it.type == 1500 }
-        wrBookingItem.ticketCodes.forEach { 
-            wrTicketCode ->
-            val thePersonCategory = PersonCategory.find {
-                (PersonCategories.externalSource eq source) and 
-                        (PersonCategories.externalId eq getExternalPersonCategoryId(wrTicketCode.personCategoryIndex))
-            }.first()
-                    //personCategories[wrTicketCode.personCategoryIndex]!!
-            val ticket = Ticket.find {
-                (Tickets.externalSource eq source) and
-                        (Tickets.externalId eq wrTicketCode.ticketCodeID)
-            }.firstOrNull() ?: Ticket.new {
-                code = wrTicketCode.code
+        // Sometimes Advance doesn't generate ticket codes - make them ourselves
+        if(numTickets != 0 && aBookingItem.ticketCodes.count() == 0) {
+            fixUngeneratedTicketCodes(aBookingItem)
+        }
+        aBookingItem.ticketCodes.forEach { 
+            aTicketCode ->
+            val thePersonCategory = getPersonCategory(aTicketCode.personCategoryIndex)!!
+            Ticket.new {
+                code = aTicketCode.code
                 bookingItem = targetBookingItem
                 basePrice = personCategoryTicketPrices[thePersonCategory] ?: BigDecimal.ZERO
                 personCategory = thePersonCategory
             }
-            ticket.bookingItem = targetBookingItem
-            ticket.code = wrTicketCode.code
-            ticket.basePrice = personCategoryTicketPrices[thePersonCategory] ?: BigDecimal.ZERO
-            ticket.personCategory = thePersonCategory
         }
+    }
+    
+    private fun fixUngeneratedTicketCodes(
+            aBookingItem: AdvanceBookingItem
+    ) {
+        val ticketCodes = mutableListOf<AdvanceTicketCode>()
+        aBookingItem.lineTotals.filter { it.type == 1101 }.forEach {
+            lineTotal ->
+            val thePersonCategory = PersonCategory.find {
+                (PersonCategories.externalSource eq source) and 
+                        (PersonCategories.name eq lineTotal.label)
+            }.first()
+            val aTicketCode = AdvanceTicketCode()
+            aTicketCode.personCategoryIndex = thePersonCategory.externalId!! - (10 * locationId)
+            aTicketCode.code = "No Ticket Code Generated"
+            ticketCodes.add(aTicketCode)
+        }
+        aBookingItem.ticketCodes = ticketCodes
     }
 
     private fun importAvailability(
@@ -376,11 +449,7 @@ class AdvanceLocationManager {
         val availability = api20Request(
                 "/merchants/$locationId/calendars/$availabilityId",
                 AdvanceAvailabilityResponse::class.java).calendarEntry
-        println("Event product ID: ${availability.productID}")
-        val eventProduct = Product.find {
-            (Products.externalSource eq source) and (Products.externalId eq availability.productID)
-        }.first()
-        //products[availability.productID]!!
+        val eventProduct = getProduct(availability.productID)!!
         val event = Event.find {
             (Events.externalSource eq source) and (Events.externalId eq availability.availabilityID)
         }.firstOrNull() ?: Event.new {

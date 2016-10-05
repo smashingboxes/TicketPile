@@ -14,6 +14,8 @@ internal val tables = arrayOf(
         Products,
         AddOns,
         Discounts,
+        DiscountPersonCategories,
+        DiscountProducts,
         BookingAddOns,
         BookingDiscounts,
         BookingManualAdjustments,

@@ -14,7 +14,7 @@ import java.security.SecureRandom
  * Created by jonlatane on 9/3/16.
  */
 
-internal val authKeySize = 128
+internal val UserAuthKeysize = 255
 
 object Users : RelationalTable("user") {
     val name = varchar("name", length = 128)
@@ -22,8 +22,8 @@ object Users : RelationalTable("user") {
 }
 
 
-object AuthKeys : ReferenceTable("advanceAuthKey", Users) {
-    val authKey = varchar("authKey", length = authKeySize)
+object UserAuthKeys : ReferenceTable("userAuthKey", Users) {
+    val authKey = varchar("authKey", length = UserAuthKeysize)
             .index(isUnique = true)
     val expirationDate = datetime("expirationDate").nullable()
 }
@@ -36,18 +36,18 @@ class User(id: EntityID<Int>) : RelationalEntity(id) {
     @get:JsonProperty
     var name by Users.name
     
-    val authKeys by children(AuthKey)
+    val authKeys by UserAuthKey referrersOn UserAuthKeys.parent
 }
 
-class AuthKey(id: EntityID<Int>) : RelationalEntity(id) {
-    companion object : IntEntityClass<AuthKey>(AuthKeys)
-    var user by User referencedOn AuthKeys.parent
-    var authKey by AuthKeys.authKey
-    var expirationDate by AuthKeys.expirationDate
+class UserAuthKey(id: EntityID<Int>) : RelationalEntity(id) {
+    companion object : IntEntityClass<UserAuthKey>(UserAuthKeys)
+    var user by User referencedOn UserAuthKeys.parent
+    var authKey by UserAuthKeys.authKey
+    var expirationDate by UserAuthKeys.expirationDate
 }
 
 internal val tables = arrayOf(
-        Users, AuthKeys
+        Users, UserAuthKeys
 )
 
 fun initializeSecurity() {
@@ -57,12 +57,12 @@ fun initializeSecurity() {
                 name = "admin"
             }
     val adminAuthKey = adminUser.authKeys.firstOrNull() ?:
-            AuthKey.new {
+            UserAuthKey.new {
                 user = adminUser
                 expirationDate = null
                 authKey = {
                     val random = SecureRandom()
-                    BigInteger(5 * authKeySize, random).toString(32)
+                    BigInteger(5 * UserAuthKeysize, random).toString(32)
                 }()
             }
     println("Security setup complete!")

@@ -5,6 +5,7 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.BookingItemAddOns
 import ticketpile.service.database.BookingItems
+import ticketpile.service.database.Tickets
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
 
@@ -20,9 +21,9 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
     @get:JsonProperty
     val bookingItemId by PK
     @get:JsonProperty
-    val addOns by children(BookingItemAddOn)
+    val addOns by BookingItemAddOn referrersOn BookingItemAddOns.parent
     @get:JsonProperty
-    override val tickets : Iterable<Ticket> by children(Ticket)
+    override val tickets : Iterable<Ticket> by Ticket referrersOn Tickets.parent
 }
 
 class BookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<BookingItem> {

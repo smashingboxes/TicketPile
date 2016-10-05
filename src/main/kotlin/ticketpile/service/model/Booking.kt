@@ -3,9 +3,11 @@ package ticketpile.service.model
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
+import java.math.BigDecimal
 
 /**
  * Created by jonlatane on 8/28/16.
@@ -13,8 +15,6 @@ import ticketpile.service.util.RelationalEntity
 
 class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     companion object : IntEntityClass<Booking>(Bookings)
-    /*internal val tickets : Iterable<Ticket>
-            by children(Ticket, Tickets.booking)*/
 
     @get:JsonProperty
     val bookingId by PK
@@ -26,35 +26,72 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     var status by Bookings.status
     
     @get:JsonProperty
-    val items : Iterable<BookingItem> 
-            by children(BookingItem, BookingItems.booking)
+    val items by BookingItem referrersOn BookingItems.booking
     
     @get:JsonProperty
-    val addOns : Iterable<BookingAddOn> 
-            by children(BookingAddOn)
+    val addOns by BookingAddOn referrersOn BookingAddOns.parent
     
     @get:JsonProperty
-    val discounts : Iterable<BookingDiscount> 
-            by children(BookingDiscount)
+    val discounts by BookingDiscount referrersOn BookingDiscounts.parent
     
     @get:JsonProperty
-    val manualAdjustments : Iterable<BookingManualAdjustment> 
-            by children(BookingManualAdjustment)
+    val manualAdjustments by BookingManualAdjustment referrersOn  BookingManualAdjustments.parent
     
     @get:JsonProperty
     var customer by Customer referencedOn Bookings.customer
     
     @get:JsonProperty
-    val bookingTotal = grossRevenue
+    val bookingTotal :BigDecimal get() {
+        return grossRevenue
+    }
     
-    override val tickets : Iterable<Ticket> get() {
+    private val _items by BookingItem referrersOn BookingItems.booking
+    override val tickets : List<Ticket> get() {
         val result = mutableListOf<Ticket>()
-        items.forEach {
+        _items.forEach {
             it.tickets.forEach { 
                 result.add(it)
             }
         }
         return result
+    }
+    
+    var matchesExternal by Bookings.matchesExternal
+    
+    override fun delete() {
+        items.forEach {
+            bookingItem ->
+            bookingItem.tickets.forEach {
+                ticket ->
+                TicketBookingAddOns.deleteWhere {
+                    TicketBookingAddOns.parent eq ticket.id
+                }
+                TicketBookingDiscounts.deleteWhere {
+                    TicketBookingDiscounts.parent eq ticket.id
+                }
+                TicketBookingManualAdjustments.deleteWhere {
+                    TicketBookingManualAdjustments.parent eq ticket.id
+                }
+                TicketBookingItemAddOns.deleteWhere {
+                    TicketBookingItemAddOns.parent eq ticket.id
+                }
+                ticket.delete()
+            }
+            BookingItemAddOns.deleteWhere {
+                BookingItemAddOns.parent eq bookingItem.id
+            }
+            bookingItem.delete()
+        }
+        BookingAddOns.deleteWhere {
+            BookingAddOns.parent eq id
+        }
+        BookingDiscounts.deleteWhere {
+            BookingDiscounts.parent eq id
+        }
+        BookingManualAdjustments.deleteWhere {
+            BookingManualAdjustments.parent eq id
+        }
+        super.delete()
     }
 }
 
@@ -99,5 +136,5 @@ class BookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualA
     @get:JsonProperty
     override var amount by BookingManualAdjustments.amount
 
-    override var subject by Booking referencedOn BookingDiscounts.parent
+    override var subject by Booking referencedOn BookingManualAdjustments.parent
 }

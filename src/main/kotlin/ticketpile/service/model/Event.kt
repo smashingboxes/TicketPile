@@ -32,7 +32,7 @@ open class Event(id: EntityID<Int>) : PrimaryEntity(id, Events) {
         capacity - utilization
     }
     @get:JsonProperty
-    val items by children(BookingItem,BookingItems.event)
+    val items by BookingItem referrersOn BookingItems.event
 }
 
 /*class BookingEvent(val booking: Booking, val event: Event) {
