@@ -6,9 +6,7 @@ import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializationConfig
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import org.jetbrains.exposed.dao.Entity
-import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.StdOutSqlLogger
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -31,6 +29,8 @@ class TransactionSerializer(val serializer : JsonSerializer<Any>) : JsonSerializ
             transaction(statement = {
                 serializer.serialize(o, jsonGenerator, serializerProvider)
             }, logging = false)
+        } else if(o is Iterable<*>) {
+            serializer.serialize(o.map{it}, jsonGenerator, serializerProvider)
         } else {
             serializer.serialize(o, jsonGenerator, serializerProvider)
         }
@@ -43,15 +43,6 @@ class TransactionSerializerModifier : BeanSerializerModifier() {
             beanDescription: BeanDescription,
             jsonSerializer: JsonSerializer<*>): JsonSerializer<Any> {
         return TransactionSerializer(jsonSerializer as JsonSerializer<Any>)
-    }
-}
-
-class EntityIDSerializer() : StdSerializer<EntityID<*>>(null as Class<EntityID<*>>?) {
-    override fun serialize(value: EntityID<*>?, gen: JsonGenerator?, provider: SerializerProvider?) {
-        if(value?.value is Int)
-            gen?.writeNumber(value?.value as Int)
-        else
-            gen?.writeString(value?.value.toString())
     }
 }
 

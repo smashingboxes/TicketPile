@@ -1,9 +1,8 @@
 package ticketpile.service.util
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import org.jetbrains.exposed.dao.Entity
-import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
+import org.jetbrains.exposed.dao.*
+import org.jetbrains.exposed.sql.Column
 import ticketpile.service.database.RelationalTable
 import kotlin.reflect.KProperty
 
@@ -18,10 +17,6 @@ abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): Int {
             return entity.id.value
         }
-
-        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: String) {
-
-        }
     }
     
     override fun hashCode() : Int {
@@ -32,6 +27,16 @@ abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {
         return other?.javaClass == javaClass
             && (other as RelationalEntity).PK == PK
     }
+}
+class Children<in Parent:Entity<Int>, out Child:Entity<Int>>
+(val referrers : Referrers<Int, Parent, Int, Child>) {
+    operator fun getValue(o: Parent, desc: KProperty<*>): List<Child> {
+        return referrers.getValue(o, desc).map{it}
+    }
+}
+
+open class RelationalEntityClass<T : RelationalEntity>(table: IdTable<Int>) : IntEntityClass<T>(table) {
+    infix fun childrenOn(column: Column<EntityID<Int>>) = Children(this referrersOn column)
 }
 
 abstract class PrimaryEntity(id: EntityID<Int>, table: RelationalTable) : RelationalEntity(id) {

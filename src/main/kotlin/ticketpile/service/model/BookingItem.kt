@@ -2,32 +2,32 @@ package ticketpile.service.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.BookingItemAddOns
 import ticketpile.service.database.BookingItems
 import ticketpile.service.database.Tickets
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.RelationalEntityClass
 
 /**
  * Created by jonlatane on 8/28/16.
  */
 
 class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighable {
-    companion object : IntEntityClass<BookingItem>(BookingItems)
+    companion object : RelationalEntityClass<BookingItem>(BookingItems)
     var booking by Booking referencedOn BookingItems.booking
     var event by Event referencedOn BookingItems.event
     
     @get:JsonProperty
     val bookingItemId by PK
     @get:JsonProperty
-    val addOns by BookingItemAddOn referrersOn BookingItemAddOns.parent
+    val addOns by BookingItemAddOn childrenOn BookingItemAddOns.parent
     @get:JsonProperty
-    override val tickets : Iterable<Ticket> by Ticket referrersOn Tickets.parent
+    override val tickets by Ticket childrenOn Tickets.parent
 }
 
 class BookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<BookingItem> {
-    companion object : IntEntityClass<BookingItemAddOn>(BookingItemAddOns)
+    companion object : RelationalEntityClass<BookingItemAddOn>(BookingItemAddOns)
 
     @get:JsonProperty
     val bookingAddOnId by PK

@@ -6,13 +6,14 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.RelationalEntityClass
 import java.math.BigDecimal
 
 /**
  * Created by jonlatane on 8/28/16.
  */
 class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
-    companion object : IntEntityClass<Ticket>(Tickets)
+    companion object : RelationalEntityClass<Ticket>(Tickets)
     var bookingItem by BookingItem referencedOn Tickets.parent
     
     @get:JsonProperty

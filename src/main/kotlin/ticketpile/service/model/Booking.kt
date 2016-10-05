@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.RelationalEntityClass
 import java.math.BigDecimal
 
 /**
@@ -26,16 +27,16 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     var status by Bookings.status
     
     @get:JsonProperty
-    val items by BookingItem referrersOn BookingItems.booking
+    val items by BookingItem childrenOn BookingItems.booking
     
     @get:JsonProperty
-    val addOns by BookingAddOn referrersOn BookingAddOns.parent
+    val addOns by BookingAddOn childrenOn BookingAddOns.parent
     
     @get:JsonProperty
-    val discounts by BookingDiscount referrersOn BookingDiscounts.parent
+    val discounts by BookingDiscount childrenOn BookingDiscounts.parent
     
     @get:JsonProperty
-    val manualAdjustments by BookingManualAdjustment referrersOn  BookingManualAdjustments.parent
+    val manualAdjustments by BookingManualAdjustment childrenOn BookingManualAdjustments.parent
     
     @get:JsonProperty
     var customer by Customer referencedOn Bookings.customer
@@ -45,10 +46,9 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
         return grossRevenue
     }
     
-    private val _items by BookingItem referrersOn BookingItems.booking
     override val tickets : List<Ticket> get() {
         val result = mutableListOf<Ticket>()
-        _items.forEach {
+        items.forEach {
             it.tickets.forEach { 
                 result.add(it)
             }
@@ -96,7 +96,7 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
 }
 
 class BookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Booking> {
-    companion object : IntEntityClass<BookingAddOn>(BookingAddOns)
+    companion object : RelationalEntityClass<BookingAddOn>(BookingAddOns)
     var booking by Booking referencedOn BookingAddOns.parent
 
     @get:JsonProperty
@@ -112,7 +112,7 @@ class BookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Bo
 }
 
 class BookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustment<Booking> {
-    companion object : IntEntityClass<BookingDiscount>(BookingDiscounts)
+    companion object : RelationalEntityClass<BookingDiscount>(BookingDiscounts)
     internal var booking by Booking referencedOn BookingDiscounts.parent
 
     @get:JsonProperty
@@ -126,7 +126,7 @@ class BookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustm
 }
 
 class BookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Booking> {
-    companion object : IntEntityClass<BookingManualAdjustment>(BookingManualAdjustments)
+    companion object : RelationalEntityClass<BookingManualAdjustment>(BookingManualAdjustments)
     var booking by Booking referencedOn BookingManualAdjustments.parent
 
     @get:JsonProperty
