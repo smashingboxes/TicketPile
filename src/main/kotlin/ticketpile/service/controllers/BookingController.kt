@@ -1,10 +1,7 @@
 package ticketpile.service.controllers;
 
 import org.springframework.http.MediaType
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import ticketpile.service.model.Booking
 import ticketpile.service.util.BadRequestException
 import ticketpile.service.util.transaction
@@ -58,10 +55,15 @@ class BookingController : AdjustmentController<Booking>(Booking) {
             value = "/all",
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
-    fun allBookings(): Iterable<Booking> {
-        var allBookings: Iterable<Booking> = emptyList()
+    fun allBookings(
+            @RequestParam(value = "limit", required = true)
+            limit: Int,
+            @RequestParam(value = "offset", required = true)
+            offset: Int
+    ): List<Booking> {
+        var allBookings = emptyList<Booking>()
         transaction {
-            allBookings = Booking.all().map { it -> it }
+            allBookings = Booking.all().limit(limit, offset).map { it -> it }
         }
         return allBookings
     }
