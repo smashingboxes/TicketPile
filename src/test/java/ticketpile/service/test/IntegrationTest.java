@@ -14,68 +14,49 @@
  * limitations under the License.
  */
 
-package com.example.notes;
-
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
-import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
-import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.linkWithRel;
-import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.links;
-import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
-import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
-import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
-import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.patch;
-import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
-import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
-import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
-import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
-import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
-import static org.springframework.restdocs.payload.PayloadDocumentation.requestFields;
-import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
-import static org.springframework.restdocs.snippet.Attributes.key;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.servlet.RequestDispatcher;
+package ticketpile.service.test;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.SpringApplicationConfiguration;
-//import org.springframework.hateoas.MediaTypes;
-import org.springframework.restdocs.JUnitRestDocumentation;
-import org.springframework.restdocs.constraints.ConstraintDescriptions;
-import org.springframework.restdocs.mockmvc.RestDocumentationResultHandler;
-import org.springframework.restdocs.payload.FieldDescriptor;
-import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.util.StringUtils;
-import org.springframework.web.context.WebApplicationContext;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import ticketpile.service.TicketPile;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = TicketPile.class)
-@WebAppConfiguration
-public class ApiDocumentation {
-	
-	@Rule
-	public final JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation("build/generated-snippets");
-	
-	private RestDocumentationResultHandler documentationHandler; 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
-	/*@Autowired
+/**
+ * A straightforward integration test.  Runs the synchronization and uses TicketPile's
+ * built-in validation system to verify the Advance integration is working correctly.
+ * 
+ * See {@link ticketpile.service.advance.ValidationKt} for validation implementation.
+ */
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringBootTest(classes = TicketPile.class)
+@WebAppConfiguration
+public class IntegrationTest {
+	private static int[] testLocations = {34100};
+	private MockMvc mockMvc;
+
+	@Before
+	public void setUp() {
+		this.mockMvc = MockMvcBuilders.webAppContextSetup(new AnnotationConfigEmbeddedWebApplicationContext())
+				.build();
+	}
+
+	@Test
+	public void noNonMatchingBookings() throws Exception {
+		this.mockMvc.perform(get("/Advance/booking/nonMatching"));
+	}
+	
+	/*
+	Convenient test examples from an example Note app are included
+	
+	@Autowired
 	private NoteRepository noteRepository;
 
 	@Autowired
@@ -87,7 +68,6 @@ public class ApiDocumentation {
 	@Autowired
 	private WebApplicationContext context;
 
-	private MockMvc mockMvc;
 
 	@Before
 	public void setUp() {
