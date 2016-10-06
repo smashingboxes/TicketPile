@@ -119,7 +119,7 @@ class AdvanceLocationManager {
 
         TicketAdjustmentTransform.transform(booking)
         
-        booking.matchesExternal = (booking.bookingTotal - reservation.pricing.totalAmount) < BigDecimal(0.001)
+        booking.matchesExternal = isValid(booking, reservation)
         return booking
     }
 

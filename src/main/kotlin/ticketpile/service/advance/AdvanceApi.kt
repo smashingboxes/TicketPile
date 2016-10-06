@@ -10,6 +10,8 @@ import java.math.BigDecimal
  * Created by jonlatane on 8/28/16.
  */
 
+
+
 data class AdvanceAuthRequest(
         @get:JsonProperty
         var username : String,
