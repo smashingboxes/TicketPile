@@ -30,6 +30,7 @@ repositories {
     maven {
         url 'https://dl.bintray.com/kotlin/exposed/'
     }
+    maven { url  "http://dl.bintray.com/oembedler/maven" }
 }
 
 configurations {
@@ -45,7 +46,10 @@ dependencies {
     compile 'com.zaxxer:HikariCP:2.4.7'
     
     //Jackson types
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.7.5"
+    compile ("com.fasterxml.jackson.module:jackson-module-kotlin:2.8.3") {
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-reflect"
+    }
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-joda', version: '2.0.2'
 
     //Spring Boot
@@ -59,6 +63,14 @@ dependencies {
     compile "io.springfox:springfox-swagger2:2.5.0"
     compile 'io.springfox:springfox-swagger-ui:2.5.0'
     
+    //GraphQL
+    //compile "com.graphql-java:graphql-java-annotations:0.11.0"
+    compile ('com.embedler.moon.graphql.boot.starter:graphql-spring-boot-starter:2.0') {
+        exclude group: 'com.fasterxml.jackson.core'
+        exclude group: 'org.springframework'
+    }
+    compile 'com.embedler.moon.graphql.boot.starter:graphiql-spring-boot-starter:2.0.0'
+    
     //DB
     compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.37'
     compile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.7.2'
@@ -67,7 +79,6 @@ dependencies {
 
     testCompile 'org.springframework.boot:spring-boot-starter-test'
     testCompile("org.springframework.security:spring-security-test")
-    //testCompile 'org.springframework.restdocs:spring-restdocs-mockmvc:1.1.1.RELEASE'
     testCompile 'junit:junit'
 }
 

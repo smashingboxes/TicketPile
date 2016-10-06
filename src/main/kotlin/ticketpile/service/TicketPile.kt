@@ -1,5 +1,6 @@
 package ticketpile.service
 
+import com.oembedler.moon.graphql.boot.EnableGraphQLServer
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
@@ -47,9 +48,11 @@ import javax.sql.DataSource
  * - Kicks off job to connect to DB and create/update tables
  * - Starts Advance synchronization jobs on schedule
  */
+
 @SpringBootApplication(exclude = arrayOf( SecurityAutoConfiguration::class ))
 @EnableSwagger2
 @EnableConfigurationProperties
+@EnableGraphQLServer
 open class TicketPile {
     companion object {
         @JvmStatic fun main(args: Array<String>) {

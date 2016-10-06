@@ -6,10 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import org.jetbrains.exposed.dao.EntityID
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import ticketpile.service.util.EntityIDSerializer
 import ticketpile.service.util.TransactionSerializerModifier
 
 /**
@@ -30,7 +28,6 @@ open class JacksonConfiguration {
 
         val module = KotlinModule()
         module.setSerializerModifier(TransactionSerializerModifier())
-        module.addSerializer(EntityID::class.java as Class<out EntityID<*>>, EntityIDSerializer())
         mapper.registerModule(module)
         
         mapper.registerModule(JodaModule())

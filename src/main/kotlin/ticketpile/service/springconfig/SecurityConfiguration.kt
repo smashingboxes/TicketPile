@@ -35,6 +35,7 @@ open class SecurityConfiguration : WebSecurityConfigurerAdapter() {
         // Allow Swagger UI stuff through. No one without
         // the admin credentials can hit real data.
         web.ignoring().antMatchers(
+                "/",
                 "/swagger-ui.html",
                 "/webjars/springfox-swagger-ui/**/*",
                 "/swagger-resources",
