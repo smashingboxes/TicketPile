@@ -1,7 +1,9 @@
 package ticketpile.service.advance
 
+import org.jetbrains.exposed.dao.EntityCache
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
@@ -112,15 +114,21 @@ class AdvanceLocationManager {
             customer = bookingCustomer
             status = reservation.bookingStatus
         }
-        importBookingItems(booking, reservation)
         importDiscounts(booking, reservation)
         importBookingAddOns(booking, reservation)
         importManualAdjustments(booking, reservation)
+        importBookingItems(booking, reservation)
 
+        flushEntityCache()
         TicketAdjustmentTransform.transform(booking)
-        
+
+        flushEntityCache()
         booking.matchesExternal = isValid(booking, reservation)
         return booking
+    }
+    
+    private fun flushEntityCache() {
+        EntityCache.getOrCreate(TransactionManager.current()).flush()
     }
 
     fun importDiscountRules(reservation : AdvanceReservation) {

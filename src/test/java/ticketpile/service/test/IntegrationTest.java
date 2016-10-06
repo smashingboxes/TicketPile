@@ -19,12 +19,13 @@ package ticketpile.service.test;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.boot.context.embedded.AnnotationConfigEmbeddedWebApplicationContext;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.support.GenericWebApplicationContext;
 import ticketpile.service.TicketPile;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -39,18 +40,44 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest(classes = TicketPile.class)
 @WebAppConfiguration
 public class IntegrationTest {
-	private static int[] testLocations = {34100};
 	private MockMvc mockMvc;
+	private GenericWebApplicationContext context;
+	
+	static class AdvanceTestUser {
+		String advanceHost;
+		String advanceUser;
+		String advancePassword;
+		Integer locationId;
+		AdvanceTestUser(String advanceHost, String advanceUser, String advancePassword, Integer locationId) {
+			this.advanceHost = advanceHost;
+			this.advanceUser = advanceUser;
+			this.advancePassword = advancePassword;
+			this.locationId = locationId;
+		}
+	}
+	AdvanceTestUser[] users = {
+			new AdvanceTestUser(
+					"http://localhost:8080", 
+					"info@experiencetheride.com", 
+					"changethispasswordbeforetesting", 
+					34100
+			)
+	};
 
 	@Before
 	public void setUp() {
-		this.mockMvc = MockMvcBuilders.webAppContextSetup(new AnnotationConfigEmbeddedWebApplicationContext())
-				.build();
+		this.context = new GenericWebApplicationContext();
+		this.context.setServletContext(new MockServletContext());
+		this.mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+		for(AdvanceTestUser user : users) {
+			//this.mockMvc.perform(post("/advance/synchronizeLocation"))
+		}
 	}
 
 	@Test
 	public void noNonMatchingBookings() throws Exception {
-		this.mockMvc.perform(get("/Advance/booking/nonMatching"));
+		this.mockMvc.perform(get("/advance/booking/nonMatching")
+				.header("Bearer", ""));
 	}
 	
 	/*

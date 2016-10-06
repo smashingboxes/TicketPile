@@ -66,8 +66,7 @@ abstract class TicketAdjustmentTransform<Adj : Adjustment<*>>() {
         }
     }
     private fun transform(booking : Booking) {
-        sources(booking).forEach { 
-            
+        sources(booking).forEach {
             adjustment ->
             val tickets = booking.tickets
             val weighedValues = mutableMapOf<Ticket, BigDecimal>()

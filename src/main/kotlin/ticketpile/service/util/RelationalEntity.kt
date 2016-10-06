@@ -28,15 +28,16 @@ abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {
             && (other as RelationalEntity).PK == PK
     }
 }
+
 class Children<in Parent:Entity<Int>, out Child:Entity<Int>>
 (val referrers : Referrers<Int, Parent, Int, Child>) {
     operator fun getValue(o: Parent, desc: KProperty<*>): List<Child> {
-        return referrers.getValue(o, desc).map{it}
+        return referrers.getValue(o, desc).toList()
     }
 }
 
 open class RelationalEntityClass<T : RelationalEntity>(table: IdTable<Int>) : IntEntityClass<T>(table) {
-    infix fun childrenOn(column: Column<EntityID<Int>>) = Children(this referrersOn column)
+    infix fun childrenOn(column: Column<EntityID<Int>>) = Children(super.referrersOn(column, true))
 }
 
 abstract class PrimaryEntity(id: EntityID<Int>, table: RelationalTable) : RelationalEntity(id) {

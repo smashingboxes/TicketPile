@@ -157,11 +157,11 @@ val individualBookingSync = {
                 transaction(statement =  {
                     manager.importByAdvanceReservation(advanceReservation)
                 }, logging = false, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
-                transaction {
+                transaction(statement = {
                     AdvanceSyncTaskBookings.deleteWhere {
                         AdvanceSyncTaskBookings.id eq taskBooking.id
                     }
-                }
+                }, logging = false)
             } catch(t: HttpClientErrorException) {
                 if (t.rawStatusCode == 401)
                     task.updateAuthentication()

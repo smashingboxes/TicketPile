@@ -2,6 +2,7 @@ package ticketpile.service.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.database.BookingItemAddOns
 import ticketpile.service.database.BookingItems
 import ticketpile.service.database.Tickets
@@ -24,6 +25,14 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
     val addOns by BookingItemAddOn childrenOn BookingItemAddOns.parent
     @get:JsonProperty
     override val tickets by Ticket childrenOn Tickets.parent
+    
+    override fun delete() {
+        tickets.forEach(Ticket::delete)
+        BookingItemAddOns.deleteWhere {
+            BookingItemAddOns.parent eq id
+        }
+        super.delete()
+    }
 }
 
 class BookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<BookingItem> {

@@ -63,9 +63,9 @@ open class AdvanceReservationController {
     fun synchronizeLocation(
             @RequestParam(value = "advanceHost", required = true)
             host: String,
-            @RequestParam(value = "advanceUser", required = false)
+            @RequestParam(value = "advanceUser", required = true)
             advanceUser: String?,
-            @RequestParam(value = "advancePassword", required = false)
+            @RequestParam(value = "advancePassword", required = true)
             advancePassword: String?,
             @RequestParam(value = "advanceLocationId", required = true)
             locationId: Int

@@ -3,6 +3,7 @@ package ticketpile.service.model
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
@@ -25,13 +26,13 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
     @get:JsonProperty
     var basePrice by Tickets.basePrice
     //@get:JsonProperty
-    val bookingAddOnAdjustments by TicketBookingAddOn referrersOn TicketBookingAddOns.parent
+    val bookingAddOnAdjustments by TicketBookingAddOn childrenOn TicketBookingAddOns.parent
     //@get:JsonProperty
-    val bookingManualAdjustments by TicketBookingManualAdjustment referrersOn TicketBookingManualAdjustments.parent
+    val bookingManualAdjustments by TicketBookingManualAdjustment childrenOn TicketBookingManualAdjustments.parent
     //@get:JsonProperty
-    val bookingDiscountAdjustments by TicketBookingDiscount referrersOn TicketBookingDiscounts.parent
+    val bookingDiscountAdjustments by TicketBookingDiscount childrenOn TicketBookingDiscounts.parent
     //@get:JsonProperty
-    val bookingItemAddOnAdjustments by TicketBookingItemAddOn referrersOn TicketBookingItemAddOns.parent
+    val bookingItemAddOnAdjustments by TicketBookingItemAddOn childrenOn TicketBookingItemAddOns.parent
     @get:JsonProperty
     val grossRevenue : BigDecimal get() {
         var result = basePrice
@@ -55,6 +56,21 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
         }
         return result
     }
+    override fun delete() {
+        TicketBookingAddOns.deleteWhere {
+            TicketBookingAddOns.parent eq id
+        }
+        TicketBookingDiscounts.deleteWhere {
+            TicketBookingDiscounts.parent eq id
+        }
+        TicketBookingManualAdjustments.deleteWhere {
+            TicketBookingManualAdjustments.parent eq id
+        }
+        TicketBookingItemAddOns.deleteWhere {
+            TicketBookingItemAddOns.parent eq id
+        }
+        super.delete()
+    }
 }
 
 class PersonCategory(id: EntityID<Int>) : PrimaryEntity(id, PersonCategories) {
@@ -69,7 +85,7 @@ class PersonCategory(id: EntityID<Int>) : PrimaryEntity(id, PersonCategories) {
 }
 
 class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>, MappedAdjustment<BookingAddOn>{
-    companion object : IntEntityClass<TicketBookingAddOn>(TicketBookingAddOns)
+    companion object : RelationalEntityClass<TicketBookingAddOn>(TicketBookingAddOns)
     override var subject by Ticket referencedOn TicketBookingAddOns.parent
     
     @get:JsonProperty
@@ -83,7 +99,7 @@ class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustm
 }
 
 class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountAdjustment<Ticket>, MappedAdjustment<BookingDiscount> {
-    companion object : IntEntityClass<TicketBookingDiscount>(TicketBookingDiscounts)
+    companion object : RelationalEntityClass<TicketBookingDiscount>(TicketBookingDiscounts)
     override var subject by Ticket referencedOn TicketBookingDiscounts.parent
 
     @get:JsonProperty
@@ -95,7 +111,7 @@ class TicketBookingDiscount(id: EntityID<Int>) : RelationalEntity(id), DiscountA
 }
 
 class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Ticket>, MappedAdjustment<BookingManualAdjustment> {
-    companion object : IntEntityClass<TicketBookingManualAdjustment>(TicketBookingManualAdjustments)
+    companion object : RelationalEntityClass<TicketBookingManualAdjustment>(TicketBookingManualAdjustments)
     override var subject by Ticket referencedOn TicketBookingManualAdjustments.parent
 
     @get:JsonProperty
@@ -108,7 +124,7 @@ class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), M
 }
 
 class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>, MappedAdjustment<BookingItemAddOn> {
-    companion object : IntEntityClass<TicketBookingItemAddOn>(TicketBookingItemAddOns)
+    companion object : RelationalEntityClass<TicketBookingItemAddOn>(TicketBookingItemAddOns)
     override var subject by Ticket referencedOn TicketBookingItemAddOns.parent
 
     @get:JsonProperty

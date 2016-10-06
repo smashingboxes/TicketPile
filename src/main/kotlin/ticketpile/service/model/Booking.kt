@@ -59,29 +59,7 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     var matchesExternal by Bookings.matchesExternal
     
     override fun delete() {
-        items.forEach {
-            bookingItem ->
-            bookingItem.tickets.forEach {
-                ticket ->
-                TicketBookingAddOns.deleteWhere {
-                    TicketBookingAddOns.parent eq ticket.id
-                }
-                TicketBookingDiscounts.deleteWhere {
-                    TicketBookingDiscounts.parent eq ticket.id
-                }
-                TicketBookingManualAdjustments.deleteWhere {
-                    TicketBookingManualAdjustments.parent eq ticket.id
-                }
-                TicketBookingItemAddOns.deleteWhere {
-                    TicketBookingItemAddOns.parent eq ticket.id
-                }
-                ticket.delete()
-            }
-            BookingItemAddOns.deleteWhere {
-                BookingItemAddOns.parent eq bookingItem.id
-            }
-            bookingItem.delete()
-        }
+        items.forEach(BookingItem::delete)
         BookingAddOns.deleteWhere {
             BookingAddOns.parent eq id
         }
