@@ -65,7 +65,7 @@ class AdvanceReservation() {
 }
 
 class AdvanceAddOnSelection() {
-    var addonId = -1
+    var addonID = -1
 	var name = ""
     var options = emptyList<AdvanceAddOnOption>()
 }
@@ -180,6 +180,14 @@ class AdvancePromotion() {
     var calcbasis = "perperson"
     var associations = emptyList<AdvancePromotionAssociation>()
     var personCategories = emptyList<AdvancePromotionPersonCategory>()
+}
+
+class AdvanceAddOnResponse() {
+    var addon = AdvanceAddOn()
+}
+
+class AdvanceAddOn() {
+    var priceCalcBasis = ""
 }
 
 class AdvancePromotionPersonCategory() {

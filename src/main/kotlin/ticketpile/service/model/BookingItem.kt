@@ -45,7 +45,7 @@ class BookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustmen
     @get:JsonProperty
     override var amount by BookingItemAddOns.amount
     @get:JsonProperty
-    override var prompt by BookingItemAddOns.prompt
+    override var selection by BookingItemAddOns.selection
 
     override var subject by BookingItem referencedOn BookingItemAddOns.parent
 }

@@ -114,11 +114,14 @@ class AdvanceLocationManager {
             customer = bookingCustomer
             status = reservation.bookingStatus
         }
+
+        importBookingItems(booking, reservation)
+        flushEntityCache()
+        
         importDiscounts(booking, reservation)
         importBookingAddOns(booking, reservation)
         importManualAdjustments(booking, reservation)
         importFees(booking, reservation)
-        importBookingItems(booking, reservation)
 
         flushEntityCache()
         TicketAdjustmentTransform.transform(booking)
@@ -191,6 +194,38 @@ class AdvanceLocationManager {
         }
     }
 
+    fun importAddOns(reservation : AdvanceReservation) {
+        reservation.addonSelections.forEach {
+            importAddOn(it)
+        }
+        reservation.bookingItems.forEach {
+            it.addonSelections.forEach { 
+                importAddOn(it)
+            }
+        }
+    }
+    
+    private fun importAddOn(advanceAddOnSelection: AdvanceAddOnSelection) {
+        val advanceAddOn = api20Request(
+                "/addons/${advanceAddOnSelection.addonID}",
+                AdvanceAddOnResponse::class.java
+        ).addon
+        val priceBasis = AddOnBasis.valueOf(advanceAddOn.priceCalcBasis.toUpperCase())
+        transaction {
+            val addOnSelection = AddOn.find {
+                (AddOns.externalSource eq source) and
+                        (AddOns.externalId eq advanceAddOnSelection.addonID)
+            }.firstOrNull() ?: AddOn.new {
+                name = advanceAddOnSelection.name
+                basis = priceBasis
+                externalSource = source
+                externalId = advanceAddOnSelection.addonID
+            }
+            addOnSelection.name = advanceAddOnSelection.name
+            addOnSelection.basis = priceBasis
+        }
+    }
+
     private fun importDiscounts(
             targetBooking: Booking,
             reservation: AdvanceReservation
@@ -227,7 +262,24 @@ class AdvanceLocationManager {
             targetBooking: Booking,
             reservation: AdvanceReservation
     ) {
-        //TODO - these do not affect price for TR
+        reservation.addonSelections.forEach {
+            advanceAddOnSelection ->
+            advanceAddOnSelection.options.filter {
+                it.label != null
+            }.forEach {
+                option ->
+                val theAddOn = AddOn.find {
+                    (AddOns.externalSource eq source) and
+                            (AddOns.externalId eq advanceAddOnSelection.addonID)
+                }.first()
+                BookingAddOn.new {
+                    addOn = theAddOn
+                    selection = option.label!!
+                    amount = theAddOn.basis.priceMethod(option.price, targetBooking)
+                    subject = targetBooking
+                }
+            }
+        }
     }
 
     private fun importManualAdjustments(
@@ -363,8 +415,9 @@ class AdvanceLocationManager {
                 externalSource = source
                 externalId = aBookingItem.bookingItemID
             }
-            importBookingItemAddOns(aBookingItem, bookingItem)
             importTickets(aBookingItem, bookingItem)
+            flushEntityCache()
+            importBookingItemAddOns(aBookingItem, bookingItem)
         }
     }
     
@@ -378,18 +431,14 @@ class AdvanceLocationManager {
                 it.label != null
             }.forEach {
                 option ->
-                val addOnSelection = AddOn.find {
+                val theAddOn = AddOn.find {
                     (AddOns.externalSource eq source) and
-                            (AddOns.externalId eq option.optionID)
-                }.firstOrNull() ?: AddOn.new {
-                    name = option.label!!
-                    externalSource = source
-                    externalId = option.optionID
-                }
+                            (AddOns.externalId eq advanceAddOnSelection.addonID)
+                }.first()
                 BookingItemAddOn.new {
-                    addOn = addOnSelection
-                    prompt = advanceAddOnSelection.name
-                    amount = option.price
+                    addOn = theAddOn
+                    selection = option.label!!
+                    amount = theAddOn.basis.priceMethod(option.price, bookingItem)
                     subject = bookingItem
                 }
             }
@@ -406,22 +455,22 @@ class AdvanceLocationManager {
             aBookingItem: AdvanceBookingItem,
             targetBookingItem: BookingItem
     ) {
-        val ticketData = generatePersonCategoryTicketData(aBookingItem)
+        val ticketMetadata = generatePersonCategoryTicketData(aBookingItem)
         aBookingItem.ticketCodes.forEach { 
             aTicketCode ->
             val thePersonCategory = getPersonCategory(aTicketCode.personCategoryIndex)!!
-            val personCategoryData = ticketData[thePersonCategory]
-            if(personCategoryData != null && personCategoryData.ticketsCreated < personCategoryData.totalTickets) {
+            val ticketData = ticketMetadata[thePersonCategory]
+            if(ticketData != null && ticketData.ticketsCreated < ticketData.totalTickets) {
                 Ticket.new {
                     code = aTicketCode.code
                     bookingItem = targetBookingItem
-                    basePrice = personCategoryData.ticketPrice
+                    basePrice = ticketData.ticketPrice
                     personCategory = thePersonCategory
                 }
-                personCategoryData.ticketsCreated++
+                ticketData.ticketsCreated++
             }
         }
-        createMissingTickets(targetBookingItem, ticketData)
+        createMissingTickets(targetBookingItem, ticketMetadata)
     }
     
     private fun generatePersonCategoryTicketData(

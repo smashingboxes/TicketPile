@@ -1,13 +1,7 @@
 package ticketpile.service.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import ticketpile.service.database.AddOns
-import ticketpile.service.database.Products
-import ticketpile.service.util.PrimaryEntity
-import ticketpile.service.util.RelationalEntity
 import java.math.BigDecimal
 
 
@@ -38,10 +32,16 @@ interface AddOnAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {
     @get:JsonProperty
     var addOn : AddOn
     @get:JsonProperty
-    var prompt : String
+    var selection: String
 }
 
 interface ManualAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {
+    var subject : SubjectType
+    @get:JsonProperty
+    var description : String
+}
+
+interface FeeAdjustment<SubjectType : IntEntity> : Adjustment<SubjectType> {
     var subject : SubjectType
     @get:JsonProperty
     var description : String

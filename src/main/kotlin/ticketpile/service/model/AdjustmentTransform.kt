@@ -33,9 +33,6 @@ val weighByApplicableTicketCount = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
     if(applicable(ticket))
         amount / BigDecimal(weighable.tickets.filter(applicable).count())
-        //BigDecimal.ONE.setScale(30, RoundingMode.HALF_DOWN) / 
-        //        (BigDecimal(weighable.tickets.filter(applicable).count())
-        //                .setScale(30, RoundingMode.HALF_DOWN))
     else
         BigDecimal.ZERO
 }
@@ -118,7 +115,7 @@ internal object BookingAddOnTransformation : TicketAdjustmentTransform<BookingAd
             sourceAdjustment = source
             addOn = source.addOn
             amount = weighedAmount
-            prompt = source.prompt
+            selection = source.selection
         }
     }
     override fun sources(booking : Booking) : Iterable<BookingAddOn> {
@@ -192,7 +189,7 @@ internal object BookingItemAddOnTransformation : TicketAdjustmentTransform<Booki
             sourceAdjustment = source
             addOn = source.addOn
             amount = weighedAmount
-            prompt = source.prompt
+            selection = source.selection
         }
     }
     override fun sources(booking : Booking) : Iterable<BookingItemAddOn> {

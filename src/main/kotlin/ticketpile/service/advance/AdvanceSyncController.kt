@@ -17,7 +17,7 @@ import java.sql.Connection
  */
 @RestController
 @RequestMapping(value = "/advance")
-open class AdvanceReservationController {
+open class AdvanceSyncController {
     @PostMapping(value = "/importBooking")
     fun importBooking(
             @RequestParam(value = "advanceHost", required = true)
@@ -50,6 +50,7 @@ open class AdvanceReservationController {
             manager.importProducts()
             manager.importPersonCategories()
             manager.importDiscountRules(advanceReservation)
+            manager.importAddOns(advanceReservation)
         }
         return transaction(statement =  {
             println("Importing booking $reservationId from $host")

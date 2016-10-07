@@ -154,6 +154,7 @@ val individualBookingSync = {
                 println("Advance sync: Importing booking ${taskBooking.reservationId} from ${task.advanceHost}")
                 val advanceReservation = manager.getAdvanceBooking(taskBooking.reservationId)
                 manager.importDiscountRules(advanceReservation)
+                manager.importAddOns(advanceReservation)
                 transaction(statement =  {
                     manager.importByAdvanceReservation(advanceReservation)
                 }, logging = false, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)

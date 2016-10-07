@@ -1,5 +1,6 @@
 package ticketpile.service.database
 
+import ticketpile.service.model.AddOnBasis
 import ticketpile.service.model.DiscountBasis
 
 
@@ -47,7 +48,7 @@ object Products : RelationalTable("product") {
 
 object AddOns : RelationalTable("addon") {
     val name = varchar("name", length = 128)
-    val product = reference(Products).nullable()
+    val basis = enumeration("basis", AddOnBasis::class.java)
 }
 
 object Discounts : RelationalTable("discount") {

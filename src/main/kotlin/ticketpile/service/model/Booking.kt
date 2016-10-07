@@ -87,7 +87,7 @@ class BookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Bo
     @get:JsonProperty
     override var amount by BookingAddOns.amount
     @get:JsonProperty
-    override var prompt by BookingAddOns.prompt
+    override var selection by BookingAddOns.selection
     
     override var subject by Booking referencedOn BookingAddOns.parent
 }
@@ -120,15 +120,15 @@ class BookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualA
     override var subject by Booking referencedOn BookingManualAdjustments.parent
 }
 
-class BookingFee(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Booking> {
+class BookingFee(id: EntityID<Int>) : RelationalEntity(id), FeeAdjustment<Booking> {
     companion object : RelationalEntityClass<BookingFee>(BookingFees)
     var booking by Booking referencedOn BookingFees.parent
 
     @get:JsonProperty
     val bookingFeeId by PK
     @get:JsonProperty
-    override var description by BookingManualAdjustments.description
+    override var description by BookingFees.description
     @get:JsonProperty
-    override var amount by BookingManualAdjustments.amount
+    override var amount by BookingFees.amount
     override var subject by Booking referencedOn BookingFees.parent
 }
