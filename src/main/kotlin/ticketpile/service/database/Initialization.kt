@@ -19,13 +19,12 @@ internal val tables = arrayOf(
         BookingAddOns,
         BookingDiscounts,
         BookingManualAdjustments,
-        //TicketAddOns,
-        //TicketDiscounts,
-        //TicketManualAdjustments,
+        BookingFees,
         BookingItemAddOns,
         TicketBookingAddOns,
         TicketBookingDiscounts,
         TicketBookingManualAdjustments,
+        TicketBookingFees,
         TicketBookingItemAddOns
 )
 

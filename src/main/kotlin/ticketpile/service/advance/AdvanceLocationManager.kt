@@ -117,6 +117,7 @@ class AdvanceLocationManager {
         importDiscounts(booking, reservation)
         importBookingAddOns(booking, reservation)
         importManualAdjustments(booking, reservation)
+        importFees(booking, reservation)
         importBookingItems(booking, reservation)
 
         flushEntityCache()
@@ -234,9 +235,26 @@ class AdvanceLocationManager {
             reservation: AdvanceReservation
     ) {
         reservation.lineTotals.filter {
-            it.type in arrayOf(2000,2100)
+            it.type in arrayOf(2000,2100) && !it.label.contains("ovation fee", ignoreCase = true)
         }.forEach {
             BookingManualAdjustment.new {
+                subject = targetBooking
+                amount = it.price
+                description = it.label
+            }
+        }
+    }
+
+
+    private fun importFees(
+            targetBooking: Booking,
+            reservation: AdvanceReservation
+    ) {
+        reservation.lineTotals.filter {
+            it.type in arrayOf(8300) || 
+                    (it.type in arrayOf(2000,2100) && it.label.contains("ovation fee", ignoreCase = true))
+        }.forEach {
+            BookingFee.new {
                 subject = targetBooking
                 amount = it.price
                 description = it.label

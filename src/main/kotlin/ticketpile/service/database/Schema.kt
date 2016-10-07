@@ -12,7 +12,7 @@ import ticketpile.service.model.DiscountBasis
 object Bookings : RelationalTable("booking") {
     val code = varchar("name", length = 128).index()
     val status = varchar("status", length = 128).index()
-    val customer = reference("customer", Customers).index()
+    val customer = reference(Customers).index()
     val matchesExternal = bool("matchesExternal").default(false).index()
 }
 
@@ -20,7 +20,7 @@ object Events : RelationalTable("event") {
     val capacity = integer("capacity")
     val startTime = datetime("startTime")
     val endTime = datetime("endTime")
-    val product = reference("product", Products)
+    val product = reference(Products)
 }
 
 object BookingItems : RelationalTable("bookingItem") {
@@ -29,7 +29,7 @@ object BookingItems : RelationalTable("bookingItem") {
 }
 
 object Tickets : ReferenceTable("ticket", BookingItems) {
-    val personCategory = reference("personCategory", PersonCategories)
+    val personCategory = reference(PersonCategories)
     val basePrice = decimal("baseprice", precision = 65, scale = 30)
     val code = varchar("code", length = 128)
 }
@@ -47,7 +47,7 @@ object Products : RelationalTable("product") {
 
 object AddOns : RelationalTable("addon") {
     val name = varchar("name", length = 128)
-    val product = reference("product", Products).nullable()
+    val product = reference(Products).nullable()
 }
 
 object Discounts : RelationalTable("discount") {
@@ -59,11 +59,11 @@ object Discounts : RelationalTable("discount") {
 }
 
 object DiscountPersonCategories : ReferenceTable("discountPersonCategory", Discounts) {
-    val personCategory = reference("personCategory", PersonCategories)
+    val personCategory = reference(PersonCategories)
 }
 
 object DiscountProducts : ReferenceTable("discountProduct", Discounts) {
-    val product = reference("product", Products)
+    val product = reference(Products)
 }
 
 object Customers : RelationalTable("customer") {
@@ -79,7 +79,8 @@ object Customers : RelationalTable("customer") {
 //Adjustments allowed by data model
 object BookingAddOns : AddOnTable("bookingAddOn", Bookings)
 object BookingDiscounts : DiscountTable("bookingDiscount", Bookings)
-object BookingManualAdjustments : ManualAdjustmentTable("bookingManualAdjustment", Bookings) 
+object BookingManualAdjustments : ManualAdjustmentTable("bookingManualAdjustment", Bookings)
+object BookingFees : ManualAdjustmentTable("bookingFee", Bookings)
 
 //Event Adjustments relate to an Event and a Booking
 //and affect pricing of all Tickets on an Event.
@@ -94,14 +95,17 @@ object BookingItemAddOns : AddOnTable("bookingItemAddOns", BookingItems)
 // Allows us to define programmatically how ticket prices are affected
 // by addons and discounts
 object TicketBookingAddOns : AddOnTable("ticketBookingAddOn", Tickets) {
-    val bookingAddOn = reference("bookingAddOn", BookingAddOns)
+    val bookingAddOn = reference(BookingAddOns)
 }
 object TicketBookingDiscounts : DiscountTable("ticketBookingDiscount", Tickets) {
-    val bookingDiscount = reference("bookingDiscount", BookingDiscounts)
+    val bookingDiscount = reference(BookingDiscounts)
 }
 object TicketBookingManualAdjustments : ManualAdjustmentTable("ticketBookingManualAdjustment", Tickets) {
-    val bookingManualAdjustment = reference("bookingManualAdjustment", BookingManualAdjustments)
+    val bookingManualAdjustment = reference(BookingManualAdjustments)
+}
+object TicketBookingFees : ManualAdjustmentTable("ticketBookingFee", Tickets) {
+    val bookingFee = reference(BookingFees)
 }
 object TicketBookingItemAddOns : AddOnTable("ticketBookingItemAddOn", Tickets) {
-    val bookingItemAddOn = reference("bookingItemAddOn", BookingItemAddOns)
+    val bookingItemAddOn = reference(BookingItemAddOns)
 }

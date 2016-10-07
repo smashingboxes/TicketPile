@@ -16,7 +16,8 @@ internal val transforms = arrayOf(
         BookingDiscountTransformation,
         BookingManualAdjustmentTransformation,
         BookingAddOnTransformation,
-        BookingItemAddOnTransformation
+        BookingItemAddOnTransformation,
+        BookingFeeTransformation
 )
 interface Weighable {
     val tickets : Iterable<Ticket>
@@ -146,6 +147,31 @@ internal object BookingManualAdjustmentTransformation : TicketAdjustmentTransfor
     }
     override fun sources(booking : Booking) : Iterable<BookingManualAdjustment> {
         return booking.manualAdjustments
+    }
+}
+
+
+internal object BookingFeeTransformation : TicketAdjustmentTransform<BookingFee>() {
+    override fun prepare(ticket : Ticket) {
+        TicketBookingManualAdjustments.deleteWhere {
+            TicketBookingManualAdjustments.parent eq ticket.id
+        }
+    }
+
+    override fun weigh(source: BookingFee, ticket: Ticket) : BigDecimal{
+        return weighByApplicableTicketCount(source.amount, source.booking, ticket, applicability(source))
+    }
+
+    override fun transform(source: BookingFee, ticket: Ticket, weighedAmount: BigDecimal) {
+        TicketBookingFee.new {
+            subject = ticket
+            sourceAdjustment = source
+            description = source.description
+            amount = weighedAmount
+        }
+    }
+    override fun sources(booking : Booking) : Iterable<BookingFee> {
+        return booking.fees
     }
 }
 

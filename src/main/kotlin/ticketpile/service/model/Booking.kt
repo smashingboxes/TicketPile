@@ -39,6 +39,9 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     val manualAdjustments by BookingManualAdjustment childrenOn BookingManualAdjustments.parent
     
     @get:JsonProperty
+    val fees by BookingFee childrenOn BookingFees.parent
+    
+    @get:JsonProperty
     var customer by Customer referencedOn Bookings.customer
     
     @get:JsonProperty
@@ -115,4 +118,17 @@ class BookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), ManualA
     override var amount by BookingManualAdjustments.amount
 
     override var subject by Booking referencedOn BookingManualAdjustments.parent
+}
+
+class BookingFee(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Booking> {
+    companion object : RelationalEntityClass<BookingFee>(BookingFees)
+    var booking by Booking referencedOn BookingFees.parent
+
+    @get:JsonProperty
+    val bookingFeeId by PK
+    @get:JsonProperty
+    override var description by BookingManualAdjustments.description
+    @get:JsonProperty
+    override var amount by BookingManualAdjustments.amount
+    override var subject by Booking referencedOn BookingFees.parent
 }

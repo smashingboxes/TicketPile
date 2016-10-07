@@ -1,8 +1,8 @@
 package ticketpile.service.database
 
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.sql.Column
 
 /**
  * The base ways we can affect the price of Tickets, Events
@@ -10,13 +10,12 @@ import org.jetbrains.exposed.dao.IntIdTable
  * Created by jonlatane on 8/28/16.
  */
 
-private class RelationalEntityClass<EntityType : IntEntity>(table: IntIdTable) : IntEntityClass<EntityType>(table)
-
 open class RelationalTable(val singularName : String) : IntIdTable() {
     var externalSource = varchar(name="externalHost", length = 128).nullable().index()
     var externalId = integer("externalId").nullable().index()
-    
-    fun <EntityType : IntEntity> companion() : IntEntityClass<EntityType> = RelationalEntityClass(this)
+    fun reference(foreign: RelationalTable) : Column<EntityID<Int>> {
+        return reference(foreign.singularName, foreign)
+    }
 }
 
 // To be used for things that don't affect price
@@ -29,7 +28,7 @@ open class AdjustmentTable(singularName: String, subject : RelationalTable) : Re
 }
 
 open class DiscountTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {
-    val discount = reference("discount", Discounts)
+    val discount = reference(Discounts)
 }
 
 open class ManualAdjustmentTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {
@@ -37,6 +36,6 @@ open class ManualAdjustmentTable(singularName: String, subject : RelationalTable
 }
 
 open class AddOnTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {
-    val addon = reference("addon", AddOns)
+    val addon = reference(AddOns)
     val prompt = varchar("prompt", length = 512)
 }

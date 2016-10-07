@@ -120,7 +120,18 @@ class TicketBookingManualAdjustment(id: EntityID<Int>) : RelationalEntity(id), M
     override var amount by TicketBookingManualAdjustments.amount
     //@get:JsonProperty
     override var sourceAdjustment by BookingManualAdjustment referencedOn TicketBookingManualAdjustments.bookingManualAdjustment
+}
 
+class TicketBookingFee(id: EntityID<Int>) : RelationalEntity(id), ManualAdjustment<Ticket>, MappedAdjustment<BookingFee> {
+    companion object : RelationalEntityClass<TicketBookingFee>(TicketBookingFees)
+    override var subject by Ticket referencedOn TicketBookingFees.parent
+
+    @get:JsonProperty
+    override var description by TicketBookingFees.description
+    @get:JsonProperty
+    override var amount by TicketBookingFees.amount
+    //@get:JsonProperty
+    override var sourceAdjustment by BookingFee referencedOn TicketBookingFees.bookingFee
 }
 
 class TicketBookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>, MappedAdjustment<BookingItemAddOn> {
