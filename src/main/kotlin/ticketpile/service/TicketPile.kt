@@ -188,7 +188,7 @@ open class BackgroundJobs() : CommandLineRunner, Ordered {
         for(offset in 1..3) {
             scheduler.scheduleAtFixedRate(
                     wrapTask(individualBookingSync, "Individual Booking Sync"),
-                    0, 100, TimeUnit.MILLISECONDS
+                    0, 10, TimeUnit.MILLISECONDS
             )
         }
     }

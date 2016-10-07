@@ -42,8 +42,10 @@ private fun validate(booking : Booking, reservation : AdvanceReservation) {
     }))
         throw AdvanceValidationException("Ticket count did not match", reservation)
     
-    //Test booking total
-    if((booking.bookingTotal - reservation.pricing.totalAmount).abs() > BigDecimal(0.00001))
+    //Test booking total of confirmed bookings
+    if(reservation.bookingStatus == "confirmed"
+        && (booking.bookingTotal - reservation.pricing.totalAmount).abs() > BigDecimal(0.00001)
+    )
         throw AdvanceValidationException("Booking total did not match", reservation)
     
     println("Validation success for ${reservation.bookingCode}!")

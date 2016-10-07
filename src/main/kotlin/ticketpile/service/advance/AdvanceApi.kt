@@ -35,16 +35,6 @@ class AdvanceModifiedBookingsResponse() {
     var bookingIds = emptyList<Int>()
 }
 
-class AdvanceReservationListReponse() {
-    var bookings = emptyList<AdvanceReservationListReservation>()
-}
-
-class AdvanceReservationListReservation() {
-    var bookingID = "1" //Set by String because Advance can't produce numbers in JSON
-    val bookingId : Int
-    get() = bookingID.toInt()
-}
-
 class AdvanceReservationResponse() {    
     var booking : AdvanceReservation = AdvanceReservation()
 }
@@ -130,16 +120,17 @@ class AdvancePayment() {
 }
 
 class AdvancePricing() {
+    var baseAmount = BigDecimal.ZERO
     var totalAmount = BigDecimal.ZERO
     var priceAdjustments = emptyList<AdvancePriceAdjustment>()
 }
 
-class AdvancePriceAdjustment() {
-    var amount = BigDecimal.ZERO
-    var label = ""
-    var promotionID : Int? = null
-    var type = 0
-}
+class AdvancePriceAdjustment(
+        var amount : BigDecimal = BigDecimal.ZERO,
+        var label : String = "",
+        var promotionID : Int? = null,
+        var type : Int = 0
+)
 
 class AdvanceSalesChannel() {
     

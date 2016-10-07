@@ -194,8 +194,21 @@ class AdvanceLocationManager {
             targetBooking: Booking,
             reservation: AdvanceReservation
     ) {
-        reservation.pricing.priceAdjustments.filter{it.type == 1500}
-        .forEach{
+        // Advance tries to break down discounts on its own.
+        // Undo that work, TicketPile is designed to do this better.
+        val groupedDiscounts = reservation.pricing.priceAdjustments
+                .filter { it.type == 1500 }.groupBy { it.promotionID }.values.map {
+            it.reduce { priceAdjustment1, priceAdjustment2 ->
+                AdvancePriceAdjustment(
+                        amount = priceAdjustment1.amount + priceAdjustment2.amount,
+                        label = priceAdjustment1.label,
+                        promotionID = priceAdjustment1.promotionID,
+                        type = priceAdjustment1.type
+                )
+            }
+        }
+        
+        groupedDiscounts.forEach{
             aDiscount ->
             val discountUsed = Discount.find { 
                 (Discounts.externalSource eq source) and 
@@ -364,54 +377,67 @@ class AdvanceLocationManager {
             }
         }
     }
+
+    private data class PersonCategoryTicketData(
+            val ticketPrice: BigDecimal,
+            val totalTickets: Int,
+            var ticketsCreated: Int = 0
+    )
     
     private fun importTickets(
             aBookingItem: AdvanceBookingItem,
             targetBookingItem: BookingItem
     ) {
-        val personCategoryTicketPrices = mutableMapOf<PersonCategory, BigDecimal>()
-        var numTickets = 0
-        aBookingItem.lineTotals.filter { it.type == 1101 }.forEach { 
+        val ticketData = generatePersonCategoryTicketData(aBookingItem)
+        aBookingItem.ticketCodes.forEach { 
+            aTicketCode ->
+            val thePersonCategory = getPersonCategory(aTicketCode.personCategoryIndex)!!
+            val personCategoryData = ticketData[thePersonCategory]
+            if(personCategoryData != null && personCategoryData.ticketsCreated < personCategoryData.totalTickets) {
+                Ticket.new {
+                    code = aTicketCode.code
+                    bookingItem = targetBookingItem
+                    basePrice = personCategoryData.ticketPrice
+                    personCategory = thePersonCategory
+                }
+                personCategoryData.ticketsCreated++
+            }
+        }
+        createMissingTickets(targetBookingItem, ticketData)
+    }
+    
+    private fun generatePersonCategoryTicketData(
+            aBookingItem: AdvanceBookingItem
+    ) : Map<PersonCategory, PersonCategoryTicketData> {
+        val result = mutableMapOf<PersonCategory, PersonCategoryTicketData>()
+        aBookingItem.lineTotals.filter { it.type == 1101 }.forEach {
             lineTotal ->
             val personCategory = PersonCategory.find {
                 (PersonCategories.externalSource eq source) and (PersonCategories.name eq lineTotal.label)
             }.first()
-            numTickets += lineTotal.quantity
             val ticketPrice = lineTotal.price.divide(BigDecimal(lineTotal.quantity), RoundingMode.HALF_UP)
-            personCategoryTicketPrices[personCategory] = ticketPrice
+            result[personCategory] = PersonCategoryTicketData(ticketPrice, lineTotal.quantity)
         }
-        // Sometimes Advance doesn't generate ticket codes - make them ourselves
-        if(numTickets != 0 && aBookingItem.ticketCodes.count() == 0) {
-            fixUngeneratedTicketCodes(aBookingItem)
-        }
-        aBookingItem.ticketCodes.forEach { 
-            aTicketCode ->
-            val thePersonCategory = getPersonCategory(aTicketCode.personCategoryIndex)!!
-            Ticket.new {
-                code = aTicketCode.code
-                bookingItem = targetBookingItem
-                basePrice = personCategoryTicketPrices[thePersonCategory] ?: BigDecimal.ZERO
-                personCategory = thePersonCategory
-            }
-        }
+        return result
     }
     
-    private fun fixUngeneratedTicketCodes(
-            aBookingItem: AdvanceBookingItem
+    private fun createMissingTickets(
+            targetBookingItem: BookingItem,
+            ticketMetadata: Map<PersonCategory, PersonCategoryTicketData>
     ) {
-        val ticketCodes = mutableListOf<AdvanceTicketCode>()
-        aBookingItem.lineTotals.filter { it.type == 1101 }.forEach {
-            lineTotal ->
-            val thePersonCategory = PersonCategory.find {
-                (PersonCategories.externalSource eq source) and 
-                        (PersonCategories.name eq lineTotal.label)
-            }.first()
-            val aTicketCode = AdvanceTicketCode()
-            aTicketCode.personCategoryIndex = thePersonCategory.externalId!! - (10 * locationId)
-            aTicketCode.code = "No Ticket Code Generated"
-            ticketCodes.add(aTicketCode)
+        ticketMetadata.forEach { 
+            val thePersonCategory = it.key
+            val ticketData = it.value
+            while(ticketData.ticketsCreated < ticketData.totalTickets) {
+                Ticket.new {
+                    code = "No Ticket Code Generated"
+                    bookingItem = targetBookingItem
+                    basePrice = ticketData.ticketPrice
+                    personCategory = thePersonCategory
+                }
+                ticketData.ticketsCreated++
+            }
         }
-        aBookingItem.ticketCodes = ticketCodes
     }
 
     private fun importAvailability(
