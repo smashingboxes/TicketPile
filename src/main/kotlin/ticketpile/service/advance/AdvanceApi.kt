@@ -73,7 +73,7 @@ class AdvanceAddOnSelection() {
 class AdvanceAddOnOption {
     var label :String? = ""
     var optionID = -1
-    var price = BigDecimal.ZERO
+    var price :BigDecimal? = null
 }
 
 class AdvanceBookingItem() {

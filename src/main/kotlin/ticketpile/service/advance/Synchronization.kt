@@ -157,7 +157,7 @@ val individualBookingSync = {
                 manager.importAddOns(advanceReservation)
                 transaction(statement =  {
                     manager.importByAdvanceReservation(advanceReservation)
-                }, logging = false, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
+                }, logging = true, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
                 transaction(statement = {
                     AdvanceSyncTaskBookings.deleteWhere {
                         AdvanceSyncTaskBookings.id eq taskBooking.id

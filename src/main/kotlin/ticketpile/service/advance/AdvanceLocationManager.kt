@@ -207,7 +207,7 @@ class AdvanceLocationManager {
     
     private fun importAddOn(advanceAddOnSelection: AdvanceAddOnSelection) {
         val advanceAddOn = api20Request(
-                "/addons/${advanceAddOnSelection.addonID}",
+                "/merchants/$locationId/addons/${advanceAddOnSelection.addonID}",
                 AdvanceAddOnResponse::class.java
         ).addon
         val priceBasis = AddOnBasis.valueOf(advanceAddOn.priceCalcBasis.toUpperCase())
@@ -275,7 +275,7 @@ class AdvanceLocationManager {
                 BookingAddOn.new {
                     addOn = theAddOn
                     selection = option.label!!
-                    amount = theAddOn.basis.priceMethod(option.price, targetBooking)
+                    amount = theAddOn.basis.priceMethod(option.price ?: BigDecimal.ZERO, targetBooking)
                     subject = targetBooking
                 }
             }
@@ -438,7 +438,7 @@ class AdvanceLocationManager {
                 BookingItemAddOn.new {
                     addOn = theAddOn
                     selection = option.label!!
-                    amount = theAddOn.basis.priceMethod(option.price, bookingItem)
+                    amount = theAddOn.basis.priceMethod(option.price ?: BigDecimal.ZERO, bookingItem)
                     subject = bookingItem
                 }
             }

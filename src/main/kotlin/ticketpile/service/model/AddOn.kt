@@ -24,7 +24,8 @@ enum class AddOnBasis(
 ) {
     PERPERSON(weighByApplicableTicketCount, pricePerPerson),
     PERPRODUCT(weighByApplicableGrossRevenue, pricePerItem),
-    PERUNIT(weighByApplicableGrossRevenue, pricePerItem)
+    PERUNIT(weighByApplicableGrossRevenue, pricePerItem),
+    PERBOOKING(weighByApplicableGrossRevenue, pricePerItem)
 }
 class AddOn(id: EntityID<Int>) : RelationalEntity(id) {
     companion object : IntEntityClass<AddOn>(AddOns)
