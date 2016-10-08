@@ -95,7 +95,7 @@ class AdvanceSyncTaskBooking(id: EntityID<Int>) : RelationalEntity(id) {
 // Job Logic
 private fun getActiveTasks() : Iterable<AdvanceSyncTask> {
     return transaction(statement = {
-        AdvanceSyncTask.find{ AdvanceSyncTasks.authenticated eq true }.forUpdate().map{it}
+        AdvanceSyncTask.find{ AdvanceSyncTasks.authenticated eq true }.toList()
     }, logging = false)
 }
 
