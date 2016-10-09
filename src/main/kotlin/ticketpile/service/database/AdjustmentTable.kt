@@ -10,6 +10,8 @@ import org.jetbrains.exposed.sql.Column
  * Created by jonlatane on 8/28/16.
  */
 
+val decimalScale = 30
+
 open class RelationalTable(val singularName : String) : IntIdTable() {
     var externalSource = varchar(name="externalHost", length = 128).nullable().index()
     var externalId = integer("externalId").nullable().index()
@@ -24,7 +26,7 @@ open class ReferenceTable(singularName: String, subject : RelationalTable) : Rel
 }
 
 open class AdjustmentTable(singularName: String, subject : RelationalTable) : ReferenceTable(singularName, subject) {
-    val amount = decimal("amount", precision = 65, scale = 30)
+    val amount = decimal("amount", precision = 65, scale = decimalScale)
 }
 
 open class DiscountTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {

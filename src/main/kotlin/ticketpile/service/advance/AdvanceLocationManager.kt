@@ -483,7 +483,10 @@ class AdvanceLocationManager {
             val personCategory = PersonCategory.find {
                 (PersonCategories.externalSource eq source) and (PersonCategories.name eq lineTotal.label)
             }.first()
-            val ticketPrice = lineTotal.price.divide(BigDecimal(lineTotal.quantity), RoundingMode.HALF_UP)
+            val ticketPrice = lineTotal.price.setScale(decimalScale).divide(
+                    BigDecimal(lineTotal.quantity).setScale(decimalScale), 
+                    RoundingMode.HALF_UP
+            )
             result[personCategory] = PersonCategoryTicketData(ticketPrice, lineTotal.quantity)
         }
         return result

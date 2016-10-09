@@ -15,7 +15,8 @@ import java.math.BigDecimal
  * 
  * Created by jonlatane on 8/28/16.
  */
-class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
+class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
+
     companion object : RelationalEntityClass<Ticket>(Tickets)
     var bookingItem by BookingItem referencedOn Tickets.parent
     
@@ -35,7 +36,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
     val bookingItemAddOnAdjustments by TicketBookingItemAddOn childrenOn TicketBookingItemAddOns.parent
     
     @get:JsonProperty
-    val grossRevenue : BigDecimal get() {
+    override val grossRevenue : BigDecimal get() {
         var result = basePrice
         for(adjustments in listOf<List<Adjustment<*>>>(
                 bookingAddOnAdjustments,
@@ -58,6 +59,11 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {
         }
         return result
     }
+
+    override val tickets: List<Ticket>
+        get() {
+            return listOf(this)
+        }
     override fun delete() {
         TicketBookingAddOns.deleteWhere {
             TicketBookingAddOns.parent eq id

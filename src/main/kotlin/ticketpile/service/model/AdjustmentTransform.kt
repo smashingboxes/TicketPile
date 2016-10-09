@@ -4,6 +4,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.database.TicketBookingAddOns
 import ticketpile.service.database.TicketBookingDiscounts
 import ticketpile.service.database.TicketBookingManualAdjustments
+import ticketpile.service.database.decimalScale
 import java.math.BigDecimal
 
 /**
@@ -51,26 +52,26 @@ val weighByApplicableTicketCount = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
     val applicableTickets = applicableTickets(weighable, applicable)
     if(isReallyApplicable(ticket, weighable, applicable))
-        amount / BigDecimal(applicableTickets.count()).setScale(amount.scale())
+        amount.setScale(decimalScale) / BigDecimal(applicableTickets.count()).setScale(decimalScale)
     else
-        BigDecimal.ZERO
+        BigDecimal.ZERO.setScale(decimalScale)
 }
 val weighByApplicableGrossRevenue = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
     val applicableTickets = applicableTickets(weighable, applicable)
     if(isReallyApplicable(ticket, weighable, applicable)) {
-        val applicableGross = applicableTickets.fold(BigDecimal.ZERO, {
-            total, ticket ->
-            total + ticket.grossRevenue
-        })
+        val applicableGross = applicableTickets.map{it.grossRevenue}.reduce { 
+            amount1, amount2 ->  
+            amount1 + amount2
+        }
         if(applicableGross == BigDecimal.ZERO.setScale(applicableGross.scale()))
             weighByApplicableTicketCount(amount, weighable, ticket, applicable)
         else 
-            amount *
-                    ticket.grossRevenue /
-                    applicableGross
+            amount.setScale(decimalScale) *
+                    ticket.grossRevenue.setScale(decimalScale) /
+                    applicableGross.setScale(decimalScale)
     } else
-        BigDecimal.ZERO
+        BigDecimal.ZERO.setScale(decimalScale)
 }
 
 /**
