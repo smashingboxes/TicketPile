@@ -1,6 +1,5 @@
 package ticketpile.service.model
 
-import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.deleteWhere

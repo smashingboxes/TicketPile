@@ -72,21 +72,60 @@ val weighByApplicableGrossRevenue = {
     } else
         BigDecimal.ZERO
 }
+
+/**
+ * Base class for transforming [Booking] and [BookingItem] level adjustments to
+ * [MappedAdjustment]s.
+ */
 abstract class TicketAdjustmentTransform<Adj : Adjustment<*>>() {
+    /**
+     * Delete all adjustments of the managed type from the ticket
+     */
     abstract fun prepare(ticket : Ticket)
+
+    /**
+     * Determine the actual amount of an adjustment on a given ticket, assuming
+     * the adjustment has not yet been assessed on any tickets.
+     */
     abstract fun weigh(source : Adj, ticket : Ticket) : BigDecimal
+
+    /**
+     * Apply the source adjustment to the given ticket, given the result of 
+     * [weigh] as [weighedAmount].
+     */
     abstract fun transform(source : Adj, ticket: Ticket, weighedAmount: BigDecimal)
+
+    /**
+     * Provide a list of all 
+     */
     abstract fun sources(booking : Booking) : Iterable<Adj>
+
+    /**
+     * Determine whether this adjustment should affect the price of a ticket.  Assumed to evaluate false if
+     * [mentionability] does so.
+     */
     open fun applicability(source : Adj) : (Ticket) -> Boolean {
         return {
             ticket : Ticket ->
             true
         }
     }
+
+    /**
+     * Determine whether this adjustment should affect (i.e. have it [MappedAdjustment] even listed) for a given
+     * [Ticket].
+     */
+    open fun mentionability(source : Adj) : (Ticket) -> Boolean {
+        return {
+            ticket : Ticket ->
+            true
+        }
+    }
+    
     private fun transform(booking : Booking) {
         sources(booking).forEach {
             adjustment ->
-            val tickets = booking.tickets
+            val tickets = booking.tickets.filter(mentionability(adjustment))
             val weighedValues = mutableMapOf<Ticket, BigDecimal>()
             tickets.forEach {
                 weighedValues[it] = weigh(adjustment, it)
@@ -210,6 +249,18 @@ internal object BookingItemAddOnTransformation : TicketAdjustmentTransform<Booki
             addOn = source.addOn
             amount = weighedAmount
             selection = source.selection
+        }
+    }
+    override fun applicability(source : BookingItemAddOn) : (Ticket) -> Boolean {
+        return {
+            ticket : Ticket ->
+            ticket.bookingItem == source.subject
+        }
+    }
+    override fun mentionability(source : BookingItemAddOn) : (Ticket) -> Boolean {
+        return {
+            ticket : Ticket ->
+            ticket.bookingItem == source.subject
         }
     }
     override fun sources(booking : Booking) : Iterable<BookingItemAddOn> {

@@ -86,7 +86,7 @@ object BookingFees : ManualAdjustmentTable("bookingFee", Bookings)
 
 //Event Adjustments relate to an Event and a Booking
 //and affect pricing of all Tickets on an Event.
-object BookingItemAddOns : AddOnTable("bookingItemAddOns", BookingItems)
+object BookingItemAddOns : AddOnTable("bookingItemAddOn", BookingItems)
 
 // Things not supported by ZOZI
 //object TicketAddOns : AddOnTable("ticketAddOn", Tickets)
