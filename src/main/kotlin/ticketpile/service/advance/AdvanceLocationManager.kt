@@ -89,7 +89,7 @@ class AdvanceLocationManager {
                 }
             }
             importTask
-        }, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
+        }, isolationLevel = Connection.TRANSACTION_SERIALIZABLE, logging = false)
     }
     
     fun getAdvanceBooking(reservationId: Int) : AdvanceReservation {

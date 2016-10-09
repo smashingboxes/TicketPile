@@ -103,9 +103,9 @@ val bookingQueueSync = {
     println("Booking Queue sync")
     val tasks = getActiveTasks()
     tasks.forEach { task ->
-        val shouldRefresh = transaction {
+        val shouldRefresh = transaction(statement = {
             task.bookingsLeft.empty()
-        }
+        }, logging = false)
         if (shouldRefresh) {
             println("Looking for updated bookings on ${task.advanceHost} " +
                     "for location ${task.advanceLocationId} as user " +
