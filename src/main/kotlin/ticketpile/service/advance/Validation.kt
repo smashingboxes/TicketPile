@@ -42,8 +42,10 @@ private fun validate(booking : Booking, reservation : AdvanceReservation) {
     }))
         throw AdvanceValidationException("Ticket count did not match", reservation)
     
-    //Test booking total of confirmed bookings
+    //Test booking total of confirmed bookings.  Bookings that should calculate as negative are expected
+    //to calculate as zero from Advance. See booking 3418678/A-1BHNMT from The Ride.
     if(reservation.bookingStatus == "confirmed"
+        && booking.bookingTotal >= BigDecimal.ZERO
         && (booking.bookingTotal - reservation.pricing.totalAmount).abs() > BigDecimal(0.00001)
     )
         throw AdvanceValidationException("Booking total did not match", reservation)

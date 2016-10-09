@@ -103,7 +103,8 @@ abstract class TicketAdjustmentTransform<Adj : Adjustment<*>>() {
 
     /**
      * Determine whether this adjustment should affect the price of a ticket.  Assumed to evaluate false if
-     * [mentionability] does so.
+     * [mentionability] does so.  Booking Discounts are mentionable when not applicable, Booking Item AddOns
+     * are not.
      */
     open fun applicability(source : Adj) : (Ticket) -> Boolean {
         return {
