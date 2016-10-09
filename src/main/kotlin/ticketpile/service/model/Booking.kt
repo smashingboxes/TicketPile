@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.sql.deleteWhere
+import ticketpile.service.advance.AdvanceSyncError
+import ticketpile.service.advance.AdvanceSyncErrors
+import ticketpile.service.advance.SyncErrorLevel
 import ticketpile.service.database.*
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
@@ -54,6 +57,16 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
         return grossRevenue
     }
     
+    val _errors by AdvanceSyncError childrenOn AdvanceSyncErrors.parent
+    @get:JsonProperty
+    val errors : List<AdvanceSyncError> get() {
+        return _errors.filter {it.errorType.level == SyncErrorLevel.error}
+    }
+    @get:JsonProperty
+    val warnings : List<AdvanceSyncError> get() {
+        return _errors.filter {it.errorType.level == SyncErrorLevel.warning}
+    }
+    
     override val tickets : List<Ticket> get() {
         val result = mutableListOf<Ticket>()
         items.forEach {
@@ -76,6 +89,9 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
         }
         BookingManualAdjustments.deleteWhere {
             BookingManualAdjustments.parent eq id
+        }
+        AdvanceSyncErrors.deleteWhere { 
+            AdvanceSyncErrors.parent eq id
         }
         super.delete()
     }

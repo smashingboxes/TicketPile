@@ -18,17 +18,41 @@ import java.sql.Connection
 @RestController
 @RequestMapping(value = "/advance")
 open class AdvanceSyncController {
-    @PostMapping(value = "/importBooking")
+    @PostMapping(value = "/booking/{advanceBookingId}/queued")
+    fun queueBooking(
+            @PathVariable("advanceBookingId")
+            advanceBookingId: Int,
+            @RequestParam(value = "advanceHost", required = true)
+            host: String,
+            @RequestParam(value = "advanceLocationId", required = true)
+            locationId: Int
+    ) : AdvanceSyncTask {
+        val source = AdvanceLocationManager.toSource(host)
+        val task = transaction {
+            val importTask = AdvanceSyncTask.find {
+                (AdvanceSyncTasks.advanceHost eq source)
+                (AdvanceSyncTasks.advanceLocationId eq locationId)
+            }.firstOrNull() ?: throw BadRequestException("Synchronization is not configured " +
+                    "for this location and host.")
+            AdvanceSyncTaskBooking.new {
+                reservationId = advanceBookingId
+                task = importTask
+            }
+            importTask
+        }
+        return task
+    }
+    @PostMapping(value = "/booking/{advanceBookingId}/synchronous")
     fun importBooking(
             @RequestParam(value = "advanceHost", required = true)
             host: String,
-            @RequestParam(value = "advanceUser", required = false)
+            @RequestParam(value = "advanceUser", required = true)
             advanceUser: String?,
-            @RequestParam(value = "advancePassword", required = false)
+            @RequestParam(value = "advancePassword", required = true)
             advancePassword: String?,
             @RequestParam(value = "advanceLocationId", required = true)
             locationId: Int,
-            @RequestParam(value = "advanceReservationId", required = true)
+            @PathVariable("advanceBookingId")
             reservationId: Int
     ) : Booking {
         val authKey: String
@@ -59,8 +83,26 @@ open class AdvanceSyncController {
             result
         }, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
     }
+    @GetMapping(
+            value = "/booking/{advanceBookingId}",
+            produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
+    )
+    fun getBooking(
+            @PathVariable("advanceBookingId")
+            advanceBookingId: Int,
+            @RequestParam(value = "advanceHost", required = true)
+            host: String
+    ) : Booking {
+        val source = AdvanceLocationManager.toSource(host)
+        return transaction {
+            Booking.find {
+                (Bookings.externalSource eq source) and 
+                        (Bookings.externalId eq advanceBookingId)
+            }.firstOrNull()
+        } ?: throw BadRequestException("Booking could not be found")
+    }
     
-    @PostMapping(value = "/synchronizeLocation")
+    @PostMapping(value = "/synchronization/location")
     fun synchronizeLocation(
             @RequestParam(value = "advanceHost", required = true)
             host: String,
@@ -83,7 +125,7 @@ open class AdvanceSyncController {
             throw BadRequestException("Either a valid auth key or a valid user/password must be provided. " +
                     "An invalid user/password is never acceptable.")
         }
-        
+
         val manager = AdvanceLocationManager(host, authKey, locationId)
         val task = transaction {
             val importTask = AdvanceSyncTask.find {
@@ -102,68 +144,73 @@ open class AdvanceSyncController {
         }
         return task
     }
-    
-    @GetMapping(value = "/synchronizationQueues")
+
+    @GetMapping(value = "/synchronization/queues")
     fun synchronizationQueues() : List<AdvanceSyncTask> {
         return transaction {
             AdvanceSyncTask.all().map {it}
         }
     }
-
-    @PostMapping(value = "/queueBooking/{advanceBookingId}")
-    fun queueBooking(
-            @PathVariable("advanceBookingId")
-            advanceBookingId: Int,
-            @RequestParam(value = "advanceHost", required = true)
-            host: String,
-            @RequestParam(value = "advanceLocationId", required = true)
-            locationId: Int
-    ) : AdvanceSyncTask {
-        val source = AdvanceLocationManager.toSource(host)
-        val task = transaction {
-            val importTask = AdvanceSyncTask.find {
-                (AdvanceSyncTasks.advanceHost eq source)
-                (AdvanceSyncTasks.advanceLocationId eq locationId)
-            }.firstOrNull() ?: throw BadRequestException("Synchronization is not configured " +
-                    "for this location and host.")
-            AdvanceSyncTaskBooking.new {
-                reservationId = advanceBookingId
-                task = importTask
-            }
-            importTask
-        }
-        return task
-    }
-
-
+    
     @GetMapping(
-            value = "/booking/{advanceBookingId}",
+            value = "/validation/mismatches",
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
-    fun getBooking(
-            @PathVariable("advanceBookingId")
-            advanceBookingId: Int,
-            @RequestParam(value = "advanceHost", required = true)
-            host: String
-    ) : Booking {
-        val source = AdvanceLocationManager.toSource(host)
-        return transaction {
-            Booking.find {
-                (Bookings.externalSource eq source) and 
-                        (Bookings.externalId eq advanceBookingId)
-            }.firstOrNull()
-        } ?: throw BadRequestException("Booking could not be found")
-    }
-
-    @GetMapping(
-            value = "/booking/nonMatching",
-            produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
-    )
-    fun getBooking() : List<Booking> {
+    fun getMismatches() : List<Booking> {
         return transaction {
             Booking.find {
                 Bookings.matchesExternal eq false
             }.map { it }
         }
+    }
+
+    @GetMapping(
+            value = "/validation/errors",
+            produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
+    )
+    fun getErrors() : Map<String, List<Map<String, String>>> {
+        val result = mutableMapOf<String, MutableList<Map<String, String>>>()
+        transaction {
+            AdvanceSyncError.find {
+                AdvanceSyncErrors.errorType inList (SyncErrorType.errors)
+            }.forEach {
+                val errorList = result[it.errorType.description] ?: mutableListOf<Map<String, String>>()
+                errorList.add(
+                        mapOf(
+                                "Source" to it.booking.externalSource!!,
+                                "Advance ID" to "${it.booking.externalId}",
+                                "Booking Code" to it.booking.code,
+                                "Error Message" to it.message
+                        )
+                )
+                result[it.errorType.description] = errorList
+            }
+        }
+        return result
+    }
+
+    @GetMapping(
+            value = "/validation/warnings",
+            produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
+    )
+    fun getWarnings() : Map<String, List<Map<String, String>>> {
+        val result = mutableMapOf<String, MutableList<Map<String, String>>>()
+        transaction {
+            AdvanceSyncError.find {
+                AdvanceSyncErrors.errorType inList (SyncErrorType.warnings)
+            }.forEach {
+                val errorList = result[it.errorType.description] ?: mutableListOf<Map<String, String>>()
+                errorList.add(
+                        mapOf(
+                                "Source" to it.booking.externalSource!!,
+                                "Advance ID" to "${it.booking.externalId}",
+                                "Booking Code" to it.booking.code,
+                                "Warning Message" to it.message
+                        )
+                )
+                result[it.errorType.description] = errorList
+            }
+        }
+        return result
     }
 }

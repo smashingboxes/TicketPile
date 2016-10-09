@@ -77,6 +77,9 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
         TicketBookingItemAddOns.deleteWhere {
             TicketBookingItemAddOns.parent eq id
         }
+        TicketBookingFees.deleteWhere {
+            TicketBookingFees.parent eq id
+        }
         super.delete()
     }
 }

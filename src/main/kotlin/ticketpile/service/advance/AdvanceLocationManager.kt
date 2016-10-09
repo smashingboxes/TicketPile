@@ -128,7 +128,25 @@ class AdvanceLocationManager {
         TicketAdjustmentTransform.transform(booking)
 
         flushEntityCache()
-        booking.matchesExternal = isValid(booking, reservation)
+        validateImportResult(booking, reservation)
+        flushEntityCache()
+        booking.matchesExternal = booking.errors.isEmpty()
+        if(!booking.matchesExternal) {
+            println("Validation errors for ${booking.code} (${booking.externalId}): " +
+                booking.errors.map {
+                    "\n   ${it.errorType.description}: ${it.message}"
+                }.reduce {string1, string2 -> string1 + string2}
+            )
+        } else {
+            println("Validation success for ${booking.code} (${booking.externalId})!")
+        }
+        if(booking.warnings.isNotEmpty()) {
+            println("Validation warnings for ${booking.code} (${booking.externalId}): " +
+                    booking.warnings.map {
+                        "\n   ${it.errorType.description}: ${it.message}"
+                    }.reduce {string1, string2 -> string1 + string2}
+            )
+        }
         return booking
     }
     
@@ -236,6 +254,11 @@ class AdvanceLocationManager {
         val groupedDiscounts = reservation.pricing.priceAdjustments
                 .filter { it.type == 1500 }.groupBy { it.promotionID }.values.map {
             it.reduce { priceAdjustment1, priceAdjustment2 ->
+                AdvanceSyncError.new {
+                    errorType = SyncErrorType.extraDiscountCodes
+                    booking = targetBooking
+                    message = "Advance PromotionId ${priceAdjustment1.promotionID} was listed more than once"
+                }
                 AdvancePriceAdjustment(
                         amount = priceAdjustment1.amount + priceAdjustment2.amount,
                         label = priceAdjustment1.label,
@@ -457,6 +480,7 @@ class AdvanceLocationManager {
             targetBookingItem: BookingItem
     ) {
         val ticketMetadata = generatePersonCategoryTicketData(aBookingItem)
+        val erroredPersonCategories = mutableSetOf<PersonCategory>()
         aBookingItem.ticketCodes.forEach { 
             aTicketCode ->
             val thePersonCategory = getPersonCategory(aTicketCode.personCategoryIndex)!!
@@ -469,6 +493,22 @@ class AdvanceLocationManager {
                     personCategory = thePersonCategory
                 }
                 ticketData.ticketsCreated++
+            } else if(ticketData != null //there were extra ticket codes
+                    && !erroredPersonCategories.contains(thePersonCategory)) {
+                AdvanceSyncError.new {
+                    errorType = SyncErrorType.extraTicketCodes
+                    booking = targetBookingItem.booking
+                    message = "Advance ticket code ${aTicketCode.code} was skipped because pricing " +
+                            "data only listed ${ticketData.totalTickets} tickets"
+                }
+                erroredPersonCategories.add(thePersonCategory)
+            } else if(!erroredPersonCategories.contains(thePersonCategory)){
+                AdvanceSyncError.new {
+                    errorType = SyncErrorType.mismatchTicketCodes
+                    booking = targetBookingItem.booking
+                    message = "Advance ticket code ${aTicketCode.code} was skipped because pricing " +
+                            "data didn't list any ${thePersonCategory.name} tickets"
+                }
             }
         }
         createMissingTickets(targetBookingItem, ticketMetadata)
@@ -499,7 +539,17 @@ class AdvanceLocationManager {
         ticketMetadata.forEach { 
             val thePersonCategory = it.key
             val ticketData = it.value
+            var hasErrored = false
             while(ticketData.ticketsCreated < ticketData.totalTickets) {
+                if(!hasErrored) {
+                    AdvanceSyncError.new {
+                        errorType = SyncErrorType.missingTicketCodes
+                        booking = targetBookingItem.booking
+                        message = "Created missing ticket code for ${thePersonCategory.name} ticket on Advance " +
+                                "booking item ${targetBookingItem.externalId}"
+                    }
+                    hasErrored = true
+                }
                 Ticket.new {
                     code = "No Ticket Code Generated"
                     bookingItem = targetBookingItem

@@ -1,10 +1,13 @@
 package ticketpile.service.model
 
 import org.jetbrains.exposed.sql.deleteWhere
+import ticketpile.service.advance.AdvanceSyncError
+import ticketpile.service.advance.SyncErrorType
 import ticketpile.service.database.TicketBookingAddOns
 import ticketpile.service.database.TicketBookingDiscounts
 import ticketpile.service.database.TicketBookingManualAdjustments
 import ticketpile.service.database.decimalScale
+import ticketpile.service.util.RelationalEntity
 import java.math.BigDecimal
 
 /**
@@ -127,6 +130,14 @@ abstract class TicketAdjustmentTransform<Adj : Adjustment<*>>() {
     private fun transform(booking : Booking) {
         sources(booking).forEach {
             adjustment ->
+            if(booking.tickets.filter(mentionability(adjustment)).filter(applicability(adjustment)).isEmpty()) {
+                AdvanceSyncError.new {
+                    errorType = SyncErrorType.inApplicableAdjustment
+                    this.booking = booking
+                    message = "No tickets applied to ${adjustment.javaClass.simpleName} with ID " +
+                            if(adjustment is RelationalEntity) adjustment.id.value.toString() else "unknown"
+                }
+            }
             val tickets = booking.tickets.filter(mentionability(adjustment))
             val weighedValues = mutableMapOf<Ticket, BigDecimal>()
             tickets.forEach {

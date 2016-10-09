@@ -178,7 +178,7 @@ val individualBookingSync = {
 }
 
 // Initialization
-internal val tables = arrayOf(AdvanceSyncTasks, AdvanceSyncTaskBookings)
+internal val tables = arrayOf(AdvanceSyncTasks, AdvanceSyncTaskBookings, AdvanceSyncErrors)
 fun initializeSynchronization() {
     SchemaUtils.createMissingTablesAndColumns(*tables)
 }
