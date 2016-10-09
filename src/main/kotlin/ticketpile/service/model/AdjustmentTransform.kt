@@ -20,7 +20,7 @@ internal val transforms = arrayOf(
         BookingFeeTransformation
 )
 interface Weighable {
-    val tickets : Iterable<Ticket>
+    val tickets : List<Ticket>
     val grossRevenue : BigDecimal get() {
         var result = BigDecimal.ZERO
         tickets.forEach {
@@ -29,17 +29,37 @@ interface Weighable {
         return result
     }
 }
+
+/**
+ * Returns true if the {@param ticket} is applicable or if no tickets in the {@param weighable} are applicable.
+ */
+private fun isReallyApplicable(ticket: Ticket, weighable: Weighable, applicable: (Ticket) -> Boolean) : Boolean {
+    return applicable(ticket) || weighable.tickets.filter(applicable).isEmpty()
+}
+/**
+ * Returns a list of all applicable tickets in the weighable, or a list of all tickets in the weighable if no
+ * tickets are applicable.
+ */
+private fun applicableTickets(weighable: Weighable, applicable: (Ticket) -> Boolean) : List<Ticket> {
+    var result= weighable.tickets.filter(applicable)
+    if(result.isEmpty()) {
+        result = weighable.tickets
+    }
+    return result
+}
 val weighByApplicableTicketCount = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
-    if(applicable(ticket))
-        amount / BigDecimal(weighable.tickets.filter(applicable).count())
+    val applicableTickets = applicableTickets(weighable, applicable)
+    if(isReallyApplicable(ticket, weighable, applicable))
+        amount / BigDecimal(applicableTickets.count()).setScale(amount.scale())
     else
         BigDecimal.ZERO
 }
 val weighByApplicableGrossRevenue = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
-    if(applicable(ticket)) {
-        val applicableGross = weighable.tickets.filter(applicable).fold(BigDecimal.ZERO, {
+    val applicableTickets = applicableTickets(weighable, applicable)
+    if(isReallyApplicable(ticket, weighable, applicable)) {
+        val applicableGross = applicableTickets.fold(BigDecimal.ZERO, {
             total, ticket ->
             total + ticket.grossRevenue
         })
