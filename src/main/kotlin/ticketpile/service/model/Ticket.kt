@@ -11,6 +11,8 @@ import ticketpile.service.util.RelationalEntityClass
 import java.math.BigDecimal
 
 /**
+ * Normalized fusion of ResCalcItem and TicketCode from Advance.
+ * 
  * Created by jonlatane on 8/28/16.
  */
 class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets) {

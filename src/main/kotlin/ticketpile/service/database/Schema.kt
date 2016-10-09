@@ -15,6 +15,7 @@ object Bookings : RelationalTable("booking") {
     val status = varchar("status", length = 128).index()
     val customer = reference(Customers).index()
     val matchesExternal = bool("matchesExternal").default(false).index()
+    val locationId = integer("location")
 }
 
 object Events : RelationalTable("event") {

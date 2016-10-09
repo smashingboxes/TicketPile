@@ -11,6 +11,8 @@ import ticketpile.service.util.RelationalEntityClass
 import java.math.BigDecimal
 
 /**
+ * Corresponds to a Booking/Reservation in Advance.
+ * 
  * Created by jonlatane on 8/28/16.
  */
 
@@ -43,6 +45,9 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     
     @get:JsonProperty
     var customer by Customer referencedOn Bookings.customer
+    
+    @get:JsonProperty
+    var location by Bookings.locationId
     
     @get:JsonProperty
     val bookingTotal :BigDecimal get() {

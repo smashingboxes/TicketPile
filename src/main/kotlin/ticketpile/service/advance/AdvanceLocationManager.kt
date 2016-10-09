@@ -111,6 +111,7 @@ class AdvanceLocationManager {
             code = reservation.bookingCode
             externalId = reservation.bookingID
             externalSource = source
+            location = locationId
             customer = bookingCustomer
             status = reservation.bookingStatus
         }

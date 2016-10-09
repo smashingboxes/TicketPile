@@ -8,6 +8,8 @@ import ticketpile.service.database.Events
 import ticketpile.service.util.PrimaryEntity
 
 /**
+ * Corresponds to an Availability in Advance.
+ * 
  * Created by jonlatane on 8/28/16.
  */
 open class Event(id: EntityID<Int>) : PrimaryEntity(id, Events) {
@@ -31,31 +33,5 @@ open class Event(id: EntityID<Int>) : PrimaryEntity(id, Events) {
         }
         capacity - utilization
     }
-    @get:JsonProperty
     val items by BookingItem referrersOn BookingItems.event
 }
-
-/*class BookingEvent(val booking: Booking, val event: Event) {
-    val tickets = booking.tickets.filter { 
-        ticket ->
-        ticket.event.id == event.id
-    }
-    val addOns = BookingItemAddOns.select {
-        BookingItemAddOns.parent.eq(event.id) and BookingItemAddOns.booking.eq(booking.id)
-    }.map {
-        it -> EventAddOn(it[BookingItemAddOns.id])
-    }
-}*/
-/*
-class EventAddOn(id: EntityID<Int>) : RelationalEntity(id) {
-    companion object : IntEntityClass<EventAddOn>(BookingItemAddOns)
-    var event by Event referencedOn BookingItemAddOns.parent
-    var booking by Booking referencedOn BookingItemAddOns.booking
-
-    @get:JsonProperty
-    val eventAddOnId by PK
-    @get:JsonProperty
-    var addOn by AddOn referencedOn BookingItemAddOns.addon
-    @get:JsonProperty
-    var amount by BookingItemAddOns.amount
-}*/

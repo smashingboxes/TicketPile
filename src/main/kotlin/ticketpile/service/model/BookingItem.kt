@@ -1,5 +1,6 @@
 package ticketpile.service.model
 
+import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.deleteWhere
@@ -16,7 +17,10 @@ import ticketpile.service.util.RelationalEntityClass
 
 class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighable {
     companion object : RelationalEntityClass<BookingItem>(BookingItems)
+    
     var booking by Booking referencedOn BookingItems.booking
+    
+    @get:JsonProperty
     var event by Event referencedOn BookingItems.event
     
     @get:JsonProperty
