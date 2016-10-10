@@ -62,7 +62,7 @@ class AdvanceSyncTask(id: EntityID<Int>) : RelationalEntity(id) {
         if (advanceUser != null && advancePassword != null) {
             println("Getting fresh auth key for $advanceUser on $advanceHost")
             try {
-                val newKey = AdvanceLocationManager.getAuthKey(
+                val newKey = AdvanceManager.getAuthKey(
                         advanceHost,
                         advanceUser!!,
                         advancePassword!!
@@ -127,12 +127,18 @@ val individualBookingSync = {
             val manager = AdvanceLocationManager(task.advanceHost, task.advanceAuthKey, task.advanceLocationId)
             try {
                 println("Advance sync: Importing booking ${taskBooking.reservationId} from ${task.advanceHost}")
-                val advanceReservation = manager.getAdvanceBooking(taskBooking.reservationId)
-                manager.importDiscountRules(advanceReservation)
-                manager.importAddOns(advanceReservation)
+                val advanceReservation = manager.bookingManager.getAdvanceBooking(taskBooking.reservationId)
+                
+                // The following imports will all handle their own transactions
+                manager.importRelatedAvailabilities(advanceReservation)
+                manager.importRelatedDiscounts(advanceReservation)
+                manager.importRelatedAddOns(advanceReservation)
+                
+                // The booking import itself must be done in one transaction
                 transaction(statement =  {
-                    manager.importByAdvanceReservation(advanceReservation)
+                    manager.bookingManager.importByAdvanceReservation(advanceReservation)
                 }, logging = false, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
+                
                 transaction(statement = {
                     AdvanceSyncTaskBookings.deleteWhere {
                         AdvanceSyncTaskBookings.id eq taskBooking.id

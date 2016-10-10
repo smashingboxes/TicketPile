@@ -19,16 +19,16 @@ import java.sql.Connection
 @RequestMapping(value = "/advance")
 open class AdvanceSyncController {
     @GetMapping(
-            value = "/booking/{host}/{advanceBookingId}",
+            value = "/booking/{advanceBookingId}",
             produces = arrayOf(MediaType.APPLICATION_JSON_UTF8_VALUE)
     )
     fun getBooking(
             @PathVariable("advanceBookingId")
             advanceBookingId: Int,
-            @PathVariable("host")
+            @RequestParam(value = "host", required = true)
             host: String
     ) : Booking {
-        val source = AdvanceLocationManager.toSource(host)
+        val source = AdvanceManager.toSource(host)
         return transaction {
             Booking.find {
                 (Bookings.externalSource eq source) and
@@ -37,9 +37,9 @@ open class AdvanceSyncController {
         } ?: throw BadRequestException("Booking could not be found")
     }
     
-    @PostMapping(value = "/booking/{host}/{advanceBookingId}/synchronous")
+    @PostMapping(value = "/booking/{advanceBookingId}/synchronous")
     fun importSingleBooking(
-            @PathVariable("host")
+            @RequestParam(value = "host", required = true)
             host: String,
             @RequestParam(value = "advanceUser", required = true)
             advanceUser: String?,
@@ -54,7 +54,7 @@ open class AdvanceSyncController {
         // First ensure any supplied user/password was correct; discard any given auth key.
         if(advanceUser != null && advancePassword != null) {
             try {
-                authKey = AdvanceLocationManager.getAuthKey(host, advanceUser, advancePassword)
+                authKey = AdvanceManager.getAuthKey(host, advanceUser, advancePassword)
             } catch(e : HttpClientErrorException) {
                 throw BadRequestException("Unable to authenticate with user/password", e)
             }
@@ -64,16 +64,17 @@ open class AdvanceSyncController {
         }
 
         val manager = AdvanceLocationManager(host, authKey, locationId)
-        val advanceReservation = manager.getAdvanceBooking(reservationId)
+        val advanceReservation = manager.bookingManager.getAdvanceBooking(reservationId)
         transaction {
             manager.importProducts()
             manager.importPersonCategories()
-            manager.importDiscountRules(advanceReservation)
-            manager.importAddOns(advanceReservation)
+            manager.importRelatedDiscounts(advanceReservation)
+            manager.importRelatedAddOns(advanceReservation)
+            manager.importRelatedAvailabilities(advanceReservation)
         }
         return transaction(statement =  {
             println("Importing booking $reservationId from $host")
-            val result = manager.importByAdvanceReservation(advanceReservation)
+            val result = manager.bookingManager.importByAdvanceReservation(advanceReservation)
             println("Returning Spring controller result")
             result
         }, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
@@ -94,7 +95,7 @@ open class AdvanceSyncController {
         // First ensure any supplied user/password was correct; discard any given auth key.
         if(advanceUser != null && advancePassword != null) {
             try {
-                authKey = AdvanceLocationManager.getAuthKey(host, advanceUser, advancePassword)
+                authKey = AdvanceManager.getAuthKey(host, advanceUser, advancePassword)
             } catch(e : HttpClientErrorException) {
                 throw BadRequestException("Unable to authenticate with user/password", e)
             }
@@ -129,16 +130,16 @@ open class AdvanceSyncController {
         }
     }
     
-    @PostMapping(value = "/synchronization/queues/{host}/{locationId}/{advanceBookingId}/queued")
+    @PostMapping(value = "/synchronization/queues/{locationId}/{advanceBookingId}/queued")
     fun queueBooking(
             @PathVariable("advanceBookingId")
             advanceBookingId: Int,
-            @PathVariable("host")
+            @RequestParam(value = "host", required = true)
             host: String,
             @PathVariable("locationId")
             locationId: Int
     ) : AdvanceSyncTask {
-        val source = AdvanceLocationManager.toSource(host)
+        val source = AdvanceManager.toSource(host)
         val task = transaction {
             val importTask = AdvanceSyncTask.find {
                 (AdvanceSyncTasks.advanceHost eq source)

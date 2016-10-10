@@ -178,7 +178,12 @@ internal object BookingAddOnTransformation : TicketAdjustmentTransform<BookingAd
         }
     }
     override fun weigh(source: BookingAddOn, ticket: Ticket) : BigDecimal{
-        return weighByApplicableGrossRevenue(source.amount, source.booking, ticket, applicability(source))
+        return source.addOn.basis.weightMethod(
+                source.amount,
+                source.subject,
+                ticket,
+                applicability(source)
+        )
     }
     
     override fun transform(source: BookingAddOn, ticket: Ticket, weighedAmount: BigDecimal) {
@@ -252,7 +257,12 @@ internal object BookingItemAddOnTransformation : TicketAdjustmentTransform<Booki
     }
 
     override fun weigh(source: BookingItemAddOn, ticket: Ticket) : BigDecimal{
-        return weighByApplicableGrossRevenue(source.amount, source.subject, ticket, applicability(source))
+        return source.addOn.basis.weightMethod(
+                source.amount,
+                source.subject,
+                ticket,
+                applicability(source)
+        )
     }
     
     override fun transform(source: BookingItemAddOn, ticket: Ticket, weighedAmount: BigDecimal) {

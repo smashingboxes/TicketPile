@@ -26,7 +26,7 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
-import ticketpile.service.advance.AdvanceLocationManager
+import ticketpile.service.advance.AdvanceManager
 import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
@@ -65,10 +65,11 @@ open class TicketPile {
         return Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(ApiInfoBuilder()
                 .title("TicketPile API")
-                .description("TicketPile is an ETL layer that transforms " +
-                        "JSON data from the Advance API into a normalized relational DB " +
-                        "format that can be easily imported into Sisense " +
-                        "or other BI tools.")
+                .description("TicketPile is an ETL and integration testing layer that transforms " +
+                        "JSON data from the Advance API into a normalized relational DB format " +
+                        "that can be easily imported into Sisense or other BI tools. It warns of all " +
+                        "inconsistencies it finds in data it retrieves from Advance and provides errors " +
+                        "when totals from imported data fail to match those on the Advance reservation.")
                 .version("0.1")
                 .build())
         .securitySchemes(listOf(ApiKey("mykey", apiTokenHeader, "header")))
@@ -182,7 +183,7 @@ open class BackgroundJobs() : CommandLineRunner, Ordered {
         val scheduler = Executors.newScheduledThreadPool(13)
         scheduler.scheduleAtFixedRate(
                 wrapTask(bookingQueueSync, "Booking Queue Sync"),
-                0, AdvanceLocationManager.syncPeriodSeconds, TimeUnit.SECONDS
+                0, AdvanceManager.syncPeriodSeconds, TimeUnit.SECONDS
         )
         // Schedule multiple tasks for booking sync
         for(offset in 1..3) {

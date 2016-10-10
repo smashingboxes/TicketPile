@@ -42,7 +42,7 @@ class BookingItemAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustmen
     companion object : RelationalEntityClass<BookingItemAddOn>(BookingItemAddOns)
 
     @get:JsonProperty
-    val bookingAddOnId by PK
+    val bookingItemAddOnId by PK
     @get:JsonProperty
     override var addOn by AddOn referencedOn BookingItemAddOns.addon
     @get:JsonProperty

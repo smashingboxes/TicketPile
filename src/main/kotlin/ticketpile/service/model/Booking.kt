@@ -90,6 +90,9 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
         BookingManualAdjustments.deleteWhere {
             BookingManualAdjustments.parent eq id
         }
+        BookingFees.deleteWhere {
+            BookingFees.parent eq id
+        }
         AdvanceSyncErrors.deleteWhere { 
             AdvanceSyncErrors.parent eq id
         }

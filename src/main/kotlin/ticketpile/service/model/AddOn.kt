@@ -5,6 +5,7 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.AddOns
 import ticketpile.service.util.PrimaryEntity
+import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
 
 /**
@@ -16,7 +17,9 @@ val pricePerItem = {
 }
 val pricePerPerson = {
     amount: BigDecimal, weighable: Weighable ->
-    amount * (BigDecimal(weighable.tickets.count()).setScale(amount.scale()))
+    val result = (amount.setScale(decimalScale)) *
+            (BigDecimal(weighable.tickets.count()))
+    result
 }
 enum class AddOnBasis(
         val weightMethod : (BigDecimal, Weighable, Ticket, (Ticket) -> Boolean) -> BigDecimal,
