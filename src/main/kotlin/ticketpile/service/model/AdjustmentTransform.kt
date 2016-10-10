@@ -6,8 +6,8 @@ import ticketpile.service.advance.SyncErrorType
 import ticketpile.service.database.TicketBookingAddOns
 import ticketpile.service.database.TicketBookingDiscounts
 import ticketpile.service.database.TicketBookingManualAdjustments
-import ticketpile.service.database.decimalScale
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
 
 /**

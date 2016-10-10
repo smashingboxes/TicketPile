@@ -9,9 +9,6 @@ import java.math.BigDecimal
  * 
  * Created by jonlatane on 8/28/16.
  */
-
-
-
 data class AdvanceAuthRequest(
         @get:JsonProperty
         var username : String,
@@ -51,7 +48,7 @@ class AdvanceReservation() {
 	var currencyCode = ""    
 	var customer = AdvanceCustomer()    
 	var lineTotals = emptyList<AdvanceLineTotal>()    
-	var merchantID = -1    
+	var merchantID = -1
 	var officeNotes = ""    
 	var orderTakerID = -1    
 	var payments = emptyList<AdvancePayment>()    

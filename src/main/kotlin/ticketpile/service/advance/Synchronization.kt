@@ -6,9 +6,9 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.sql.*
 import org.joda.time.DateTime
 import org.springframework.web.client.HttpClientErrorException
-import ticketpile.service.database.ReferenceTable
-import ticketpile.service.database.RelationalTable
+import ticketpile.service.util.ReferenceTable
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.RelationalTable
 import ticketpile.service.util.transaction
 import java.sql.Connection
 
@@ -93,12 +93,6 @@ class AdvanceSyncTaskBooking(id: EntityID<Int>) : RelationalEntity(id) {
 }
 
 // Job Logic
-private fun getActiveTasks() : Iterable<AdvanceSyncTask> {
-    return transaction(statement = {
-        AdvanceSyncTask.find{ AdvanceSyncTasks.authenticated eq true }.toList()
-    }, logging = false)
-}
-
 val bookingQueueSync = {
     println("Booking Queue sync")
     val tasks = getActiveTasks()
@@ -123,25 +117,6 @@ val bookingQueueSync = {
             }
         }
     }
-}
-
-private fun getTaskBooking(task: AdvanceSyncTask) : AdvanceSyncTaskBooking? {
-    val id = transaction(statement = {
-        val result = AdvanceSyncTaskBookings.select {
-            (AdvanceSyncTaskBookings.parent eq task.id) and (AdvanceSyncTaskBookings.locked eq false)
-        }.limit(1).forUpdate().firstOrNull()?.get(AdvanceSyncTaskBookings.id)
-        if(result != null) {
-            AdvanceSyncTaskBookings.update({ AdvanceSyncTaskBookings.id eq result }) {
-                it[locked] = true
-            }
-        }
-        result
-    }, logging = false, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
-    if(id != null)
-        return transaction { 
-            AdvanceSyncTaskBooking.findById(id)
-        }
-    return null
 }
 
 val individualBookingSync = {
@@ -175,6 +150,31 @@ val individualBookingSync = {
             }
         }
     }
+}
+
+private fun getActiveTasks() : Iterable<AdvanceSyncTask> {
+    return transaction(statement = {
+        AdvanceSyncTask.find{ AdvanceSyncTasks.authenticated eq true }.toList()
+    }, logging = false)
+}
+
+private fun getTaskBooking(task: AdvanceSyncTask) : AdvanceSyncTaskBooking? {
+    val id = transaction(statement = {
+        val result = AdvanceSyncTaskBookings.select {
+            (AdvanceSyncTaskBookings.parent eq task.id) and (AdvanceSyncTaskBookings.locked eq false)
+        }.limit(1).forUpdate().firstOrNull()?.get(AdvanceSyncTaskBookings.id)
+        if(result != null) {
+            AdvanceSyncTaskBookings.update({ AdvanceSyncTaskBookings.id eq result }) {
+                it[locked] = true
+            }
+        }
+        result
+    }, logging = false, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
+    if(id != null)
+        return transaction {
+            AdvanceSyncTaskBooking.findById(id)
+        }
+    return null
 }
 
 // Initialization

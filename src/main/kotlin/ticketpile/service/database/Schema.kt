@@ -2,6 +2,8 @@ package ticketpile.service.database
 
 import ticketpile.service.model.AddOnBasis
 import ticketpile.service.model.DiscountBasis
+import ticketpile.service.util.ReferenceTable
+import ticketpile.service.util.RelationalTable
 
 
 /**
@@ -82,7 +84,7 @@ object Customers : RelationalTable("customer") {
 object BookingAddOns : AddOnTable("bookingAddOn", Bookings)
 object BookingDiscounts : DiscountTable("bookingDiscount", Bookings)
 object BookingManualAdjustments : ManualAdjustmentTable("bookingManualAdjustment", Bookings)
-object BookingFees : ManualAdjustmentTable("bookingFee", Bookings)
+object BookingFees : FeeTable("bookingFee", Bookings)
 
 //Event Adjustments relate to an Event and a Booking
 //and affect pricing of all Tickets on an Event.
@@ -105,7 +107,7 @@ object TicketBookingDiscounts : DiscountTable("ticketBookingDiscount", Tickets) 
 object TicketBookingManualAdjustments : ManualAdjustmentTable("ticketBookingManualAdjustment", Tickets) {
     val bookingManualAdjustment = reference(BookingManualAdjustments)
 }
-object TicketBookingFees : ManualAdjustmentTable("ticketBookingFee", Tickets) {
+object TicketBookingFees : FeeTable("ticketBookingFee", Tickets) {
     val bookingFee = reference(BookingFees)
 }
 object TicketBookingItemAddOns : AddOnTable("ticketBookingItemAddOn", Tickets) {

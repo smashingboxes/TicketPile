@@ -9,9 +9,10 @@ import ticketpile.service.util.transaction
 import java.math.BigDecimal
 
 /**
+ * Base methods for applying/unapplying discounts, addons and so forth to bookings.
  * Created by jonlatane on 8/30/16.
  */
-open abstract class AdjustmentController<SubjectType: IntEntity> (
+abstract class AdjustmentController<SubjectType: IntEntity> (
         val subjectClass : EntityClass<Int, SubjectType>
 ) {
     internal fun <AdjustmentType, AdjustmentClass> applyDiscount(

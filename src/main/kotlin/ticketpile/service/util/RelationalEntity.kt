@@ -3,11 +3,11 @@ package ticketpile.service.util
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.sql.Column
-import ticketpile.service.database.RelationalTable
 import kotlin.reflect.KProperty
 
 /**
- * Uses ReferenceTable to
+ * Base classes for application entity model.
+ * 
  * Created by jonlatane on 8/30/16.
  */
 abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {

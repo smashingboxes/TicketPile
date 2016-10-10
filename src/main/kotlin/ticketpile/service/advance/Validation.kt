@@ -3,8 +3,8 @@ package ticketpile.service.advance
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import ticketpile.service.database.Bookings
-import ticketpile.service.database.ReferenceTable
 import ticketpile.service.model.Booking
+import ticketpile.service.util.ReferenceTable
 import ticketpile.service.util.RelationalEntity
 import ticketpile.service.util.RelationalEntityClass
 import java.math.BigDecimal
@@ -51,14 +51,6 @@ class AdvanceSyncError(id: EntityID<Int>) : RelationalEntity(id) {
     var errorType by AdvanceSyncErrors.errorType
 }
 
-class AdvanceValidationException(message : String, reservation : AdvanceReservation) : Exception(
-        "Reservation ${reservation.bookingCode}: $message"
-) {
-    init {
-        println("Validation Error on ${reservation.bookingCode}: $message")
-    }
-}
-
 fun validateImportResult(booking : Booking, reservation : AdvanceReservation) {
     //Test booking item count
     if(booking.items.count() != reservation.bookingItems.count())
@@ -68,8 +60,6 @@ fun validateImportResult(booking : Booking, reservation : AdvanceReservation) {
             message = "TicketPile: ${booking.items.count()}; " +
                     "Advance ${reservation.bookingItems.count()}"
         }
-        /*throw AdvanceValidationException("Booking item count did not match: ${booking.items.count()} " +
-                "vs ${reservation.bookingItems.count()}", reservation)*/
     
     //Test ticket count
     val bookingTicketCount = booking.tickets.count()

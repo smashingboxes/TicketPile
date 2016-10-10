@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.sql.SchemaUtils
-import ticketpile.service.database.ReferenceTable
-import ticketpile.service.database.RelationalTable
+import ticketpile.service.util.ReferenceTable
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.RelationalTable
 import java.math.BigInteger
 import java.security.SecureRandom
 

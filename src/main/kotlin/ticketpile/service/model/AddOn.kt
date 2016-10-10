@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.AddOns
-import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.PrimaryEntity
 import java.math.BigDecimal
 
 /**
@@ -27,7 +27,7 @@ enum class AddOnBasis(
     PERUNIT(weighByApplicableGrossRevenue, pricePerItem),
     PERBOOKING(weighByApplicableGrossRevenue, pricePerItem)
 }
-class AddOn(id: EntityID<Int>) : RelationalEntity(id) {
+class AddOn(id: EntityID<Int>) : PrimaryEntity(id, AddOns) {
     companion object : IntEntityClass<AddOn>(AddOns)
     @get:JsonProperty
     var name by AddOns.name
@@ -35,6 +35,4 @@ class AddOn(id: EntityID<Int>) : RelationalEntity(id) {
     var basis by AddOns.basis
     @get:JsonProperty
     val addOnId by PK
-    var externalSource by AddOns.externalSource
-    var externalId by AddOns.externalId
 }

@@ -1,9 +1,7 @@
 package ticketpile.service.advance
 
-import org.jetbrains.exposed.dao.EntityCache
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
@@ -13,6 +11,8 @@ import org.springframework.http.HttpMethod
 import org.springframework.web.client.RestTemplate
 import ticketpile.service.database.*
 import ticketpile.service.model.*
+import ticketpile.service.util.decimalScale
+import ticketpile.service.util.flushEntityCache
 import ticketpile.service.util.transaction
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -72,7 +72,7 @@ class AdvanceLocationManager {
         }
         
         val bookings = api20Request(
-                "/bookings/modified?since=${
+                "/bookings/modified?locationID=$locationId&lastModified=${
                     dateTimeFormatter.print(syncTask.lastRefresh.toDateTime(DateTimeZone.UTC))
                 }",
                 AdvanceModifiedBookingsResponse::class.java
@@ -150,10 +150,6 @@ class AdvanceLocationManager {
         return booking
     }
     
-    private fun flushEntityCache() {
-        EntityCache.getOrCreate(TransactionManager.current()).flush()
-    }
-
     fun importDiscountRules(reservation : AdvanceReservation) {
         reservation.pricing.priceAdjustments.filter{it.type == 1500}
                 .forEach{
