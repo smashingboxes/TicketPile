@@ -1,14 +1,18 @@
 buildscript {
-    ext.kotlin_version = '1.0.4' // Required for Kotlin integration
-    ext.spring_boot_version = '1.4.0.RELEASE'
+    ext {
+        kotlinVersion       = '1.0.4'
+        springBootVersion  = '1.4.1.RELEASE'
+        //jettyVersion         = '9.3.12.v20160915'
+        //alpnAgentVersion     = '2.0.4'
+    }
     repositories {
         jcenter()
         mavenCentral()
     }
     dependencies {
         classpath 'mysql:mysql-connector-java:5.1.37'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version" // Required for Kotlin integration
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:$spring_boot_version"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion" // Required for Kotlin integration
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
     }
 }
 plugins {
@@ -39,7 +43,7 @@ configurations {
 
 dependencies {
     // Kotlin
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     compile 'org.jetbrains.exposed:exposed:0.6.8'
     
     // Hikari
@@ -49,7 +53,7 @@ dependencies {
     compile ("com.fasterxml.jackson.module:jackson-module-kotlin:2.8.3") {
         exclude group: "org.jetbrains.kotlin", module: "kotlin-reflect"
     }
-    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
     compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-joda', version: '2.0.2'
 
     //Spring Boot
@@ -71,11 +75,11 @@ dependencies {
     }
     compile 'com.embedler.moon.graphql.boot.starter:graphiql-spring-boot-starter:2.0.0'
     
-    //DB
+    //DB - uncomment lines to use other DB implementations.
     compile group: 'mysql', name: 'mysql-connector-java', version: '5.1.37'
-    compile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.7.2'
-    compile group: 'postgresql', name: 'postgresql', version: '9.4.1208-jdbc42-atlassian-hosted'
-    runtime 'com.h2database:h2:1.4.191'
+    //compile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.7.2'
+    //compile group: 'postgresql', name: 'postgresql', version: '9.4.1208-jdbc42-atlassian-hosted'
+    //runtime 'com.h2database:h2:1.4.191'
 
     testCompile 'org.springframework.boot:spring-boot-starter-test'
     testCompile("org.springframework.security:spring-security-test")

@@ -1,6 +1,9 @@
 package ticketpile.service
 
 import com.oembedler.moon.graphql.boot.EnableGraphQLServer
+import com.oembedler.moon.graphql.boot.GraphQLSchemaLocator
+import com.oembedler.moon.graphql.engine.GraphQLSchemaConfig
+import com.oembedler.moon.graphql.engine.GraphQLSchemaHolder
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
@@ -31,14 +34,15 @@ import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
 import ticketpile.service.database.initializeModel
+import ticketpile.service.graphql.TicketPileGraphQLSchema
 import ticketpile.service.security.initializeSecurity
 import ticketpile.service.springconfig.apiTokenHeader
 import ticketpile.service.util.transaction
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.HttpsURLConnection
 import javax.sql.DataSource
 
 /**
@@ -48,11 +52,10 @@ import javax.sql.DataSource
  * - Kicks off job to connect to DB and create/update tables
  * - Starts Advance synchronization jobs on schedule
  */
-
 @SpringBootApplication(exclude = arrayOf( SecurityAutoConfiguration::class ))
 @EnableSwagger2
 @EnableConfigurationProperties
-@EnableGraphQLServer
+//@EnableGraphQLServer
 open class TicketPile {
     companion object {
         @JvmStatic fun main(args: Array<String>) {
@@ -65,10 +68,10 @@ open class TicketPile {
         return Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(ApiInfoBuilder()
                 .title("TicketPile API")
-                .description("TicketPile is an ETL and integration testing layer that transforms " +
-                        "JSON data from the Advance API into a normalized relational DB format " +
-                        "that can be easily imported into Sisense or other BI tools. It warns of all " +
-                        "inconsistencies it finds in data it retrieves from Advance and provides errors " +
+                .description("TicketPile is an ETL and integration testing layer for Advance. " +
+                        "It transforms JSON data from the Advance API into a normalized relational database. " +
+                        "<p>" + 
+                        "It logs inconsistencies it finds in data it retrieves from Advance. It will also provides errors " +
                         "when totals from imported data fail to match those on the Advance reservation.")
                 .version("0.1")
                 .build())
@@ -97,26 +100,28 @@ open class TicketPile {
             null
         )
     }
-}
 
-@Component
-open class AllowLocalSSL() : CommandLineRunner, Ordered {
-    override fun run(vararg args: String?) {
-        println("Allowing bad SSL certs for localhost")
-        val baseVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
-        HttpsURLConnection.setDefaultHostnameVerifier({
-            hostName, sslSession ->
-            val isValid : Boolean
-            if(hostName == "localhost")
-                isValid = true
-            else
-                isValid = baseVerifier.verify(hostName, sslSession)
-            isValid
-        })
-    }
-
-    override fun getOrder(): Int {
-        return 1
+    @Bean
+    //@ConditionalOnMissingBean
+    //@Throws(ClassNotFoundException::class)
+    open fun graphQLSchemaLocator(): GraphQLSchemaLocator {
+        val graphQLSchemaHolders = mutableMapOf<String, GraphQLSchemaHolder>()
+        graphQLSchemaHolders[TicketPileGraphQLSchema.queryType.name] = 
+            GraphQLSchemaHolder(
+                    TicketPileGraphQLSchema.queryType.name,
+                    TicketPileGraphQLSchema,
+                    GraphQLSchemaConfig(),
+                    ConcurrentHashMap()
+            )
+        //val graphQLSchemaBuilder = graphQLSchemaBuilder()
+        //val schemaClasses = initialSchemaClassesSet()
+        /*if (schemaClasses.size > 0) {
+            for (schema in schemaClasses) {
+                val schemaHolder = graphQLSchemaBuilder.buildSchema(schema)
+                graphQLSchemaHolders.put(schemaHolder.getSchemaName(), schemaHolder)
+            }
+        }*/
+        return GraphQLSchemaLocator(graphQLSchemaHolders)
     }
 }
 

@@ -127,16 +127,16 @@ val individualBookingSync = {
             val manager = AdvanceLocationManager(task.advanceHost, task.advanceAuthKey, task.advanceLocationId)
             try {
                 println("Advance sync: Importing booking ${taskBooking.reservationId} from ${task.advanceHost}")
-                val advanceReservation = manager.bookingManager.getAdvanceBooking(taskBooking.reservationId)
+                val advanceBooking = manager.bookingManager.getAdvanceBooking(taskBooking.reservationId)
                 
                 // The following imports will all handle their own transactions
-                manager.importRelatedAvailabilities(advanceReservation)
-                manager.importRelatedDiscounts(advanceReservation)
-                manager.importRelatedAddOns(advanceReservation)
+                manager.importRelatedAvailabilities(advanceBooking)
+                manager.importRelatedDiscounts(advanceBooking)
+                manager.importRelatedAddOns(advanceBooking)
                 
                 // The booking import itself must be done in one transaction
                 transaction(statement =  {
-                    manager.bookingManager.importByAdvanceReservation(advanceReservation)
+                    manager.bookingManager.importByAdvanceReservation(advanceBooking)
                 }, logging = false, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
                 
                 transaction(statement = {

@@ -17,8 +17,6 @@ open class AdvanceLocationManager(host: String, authorizationKey: String, locati
 {
     val bookingManager = AdvanceBookingManager(host, authorizationKey, locationId)
     
-    
-    
     fun importRelatedAvailabilities(reservation : AdvanceReservation) {
         reservation.bookingItems.forEach {
             bookingItem ->
@@ -44,12 +42,13 @@ open class AdvanceLocationManager(host: String, authorizationKey: String, locati
             endTime = availability.endDateTime
             capacity = availability.maxCapacity
             product = eventProduct
+            locationId = this@AdvanceLocationManager.locationId 
         }
-
         event.startTime = availability.startDateTime
         event.endTime = availability.endDateTime
         event.capacity = availability.maxCapacity
         event.product = eventProduct
+        event.locationId = this@AdvanceLocationManager.locationId
         return event
     }
 
@@ -115,11 +114,23 @@ open class AdvanceLocationManager(host: String, authorizationKey: String, locati
 
     fun importRelatedAddOns(reservation : AdvanceReservation) {
         reservation.addonSelections.forEach {
-            importAddOn(it)
+            if(transaction {
+                AddOn.find {
+                    (AddOns.externalSource eq source) and
+                            (AddOns.externalId eq it.addonID)
+                }.firstOrNull()
+            } == null)
+                importAddOn(it)
         }
         reservation.bookingItems.forEach {
             it.addonSelections.forEach {
-                importAddOn(it)
+                if(transaction {
+                    AddOn.find {
+                        (AddOns.externalSource eq source) and
+                                (AddOns.externalId eq it.addonID)
+                    }.firstOrNull()
+                } == null)
+                    importAddOn(it)
             }
         }
     }

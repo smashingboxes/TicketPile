@@ -34,4 +34,6 @@ open class Event(id: EntityID<Int>) : PrimaryEntity(id, Events) {
         capacity - utilization
     }
     val items by BookingItem referrersOn BookingItems.event
+    @get:JsonProperty
+    var locationId by Events.locationId
 }

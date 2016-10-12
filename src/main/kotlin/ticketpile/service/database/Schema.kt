@@ -18,6 +18,8 @@ object Bookings : RelationalTable("booking") {
     val customer = reference(Customers).index()
     val matchesExternal = bool("matchesExternal").default(false).index()
     val locationId = integer("location")
+    
+    val idxGraphQL = index(false, externalId, status, code)
 }
 
 object Events : RelationalTable("event") {
@@ -25,6 +27,7 @@ object Events : RelationalTable("event") {
     val startTime = datetime("startTime")
     val endTime = datetime("endTime")
     val product = reference(Products)
+    val locationId = integer("location")
 }
 
 object BookingItems : RelationalTable("bookingItem") {

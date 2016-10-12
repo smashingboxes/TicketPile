@@ -58,11 +58,11 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     }
     
     val _errors by AdvanceSyncError childrenOn AdvanceSyncErrors.parent
-    @get:JsonProperty
+    //@get:JsonProperty
     val errors : List<AdvanceSyncError> get() {
         return _errors.filter {it.errorType.level == SyncErrorLevel.error}
     }
-    @get:JsonProperty
+    //@get:JsonProperty
     val warnings : List<AdvanceSyncError> get() {
         return _errors.filter {it.errorType.level == SyncErrorLevel.warning}
     }
