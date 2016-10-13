@@ -1,9 +1,5 @@
 package ticketpile.service
 
-import com.oembedler.moon.graphql.boot.EnableGraphQLServer
-import com.oembedler.moon.graphql.boot.GraphQLSchemaLocator
-import com.oembedler.moon.graphql.engine.GraphQLSchemaConfig
-import com.oembedler.moon.graphql.engine.GraphQLSchemaHolder
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
@@ -34,13 +30,11 @@ import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
 import ticketpile.service.database.initializeModel
-import ticketpile.service.graphql.TicketPileGraphQLSchema
 import ticketpile.service.security.initializeSecurity
 import ticketpile.service.springconfig.apiTokenHeader
 import ticketpile.service.util.transaction
 import java.io.PrintWriter
 import java.io.StringWriter
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
@@ -100,7 +94,7 @@ open class TicketPile {
             null
         )
     }
-
+/*
     @Bean
     //@ConditionalOnMissingBean
     //@Throws(ClassNotFoundException::class)
@@ -123,6 +117,7 @@ open class TicketPile {
         }*/
         return GraphQLSchemaLocator(graphQLSchemaHolders)
     }
+    */
 }
 
 @Component

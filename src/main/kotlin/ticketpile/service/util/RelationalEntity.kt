@@ -19,6 +19,74 @@ abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {
         }
     }
     
+    class WrappedColumn<T>(
+            val getter: (Entity<*>, KProperty<*>) -> T, 
+            val setter : (Entity<*>, KProperty<*>, T) -> Unit
+    ) {
+        operator fun getValue(o: Entity<*>, desc: KProperty<*>): T {
+            return getter(o, desc)
+        }
+        operator fun setValue(o: Entity<*>, desc: KProperty<*>, value: T) {
+            setter(o, desc, value)
+        }
+    }
+
+    /**
+     * If actual value of input [column] is null, returns a delegate that will
+     * calculate the value, set it and return it.  *Any time the value is manually modified,
+     * the delegate will set the value to null for recalculation*
+     */
+    fun <T> cacheColumn(column : Column<T?>, calculation : () -> T) : WrappedColumn<T?> {
+        return WrappedColumn(
+             getter = {
+                 o, desc ->
+                 var result = column.getValue(o, desc)
+                 if(result == null) {
+                     result = calculation()
+                     column.setValue(o, desc, result)
+                 }
+                 result
+             },
+             setter = {
+                 o, desc, value ->
+                 column.setValue(o, desc, null)
+             }
+        )
+    }
+    
+    fun <T> notifierColumn(column : Column<T>, notifier : () -> Unit) : WrappedColumn<T> {
+        return WrappedColumn(
+                getter = {
+                    o, desc ->
+                    column.getValue(o, desc)
+                },
+                setter = {
+                    o, desc, value : T ->
+                    column.setValue(o, desc, value)
+                    notifier()
+                }
+        )
+    }
+
+    fun <T> cacheNotifierColumn(column : Column<T?>, calculation : () -> T, notifier : () -> Unit) : WrappedColumn<T?> {
+        return WrappedColumn<T?>(
+                getter = {
+                    o, desc ->
+                    var result = column.getValue(o, desc)
+                    if(result == null) {
+                        result = calculation()
+                        column.setValue(o, desc, result)
+                    }
+                    result
+                },
+                setter = {
+                    o, desc, value : T? ->
+                    column.setValue(o, desc, value)
+                    notifier()
+                }
+        )
+    }
+    
     override fun hashCode() : Int {
         return id.value
     }

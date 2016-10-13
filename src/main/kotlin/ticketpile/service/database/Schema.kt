@@ -37,8 +37,16 @@ object BookingItems : RelationalTable("bookingItem") {
 
 object Tickets : ReferenceTable("ticket", BookingItems) {
     val personCategory = reference(PersonCategories)
-    val basePrice = decimal("baseprice", precision = 65, scale = 30)
+    val basePrice = decimal("baseprice")
     val code = varchar("code", length = 128)
+    
+    //Caching columns
+    val discountsAmount = decimal("discountsAmount").nullable()
+    val feesAmount = decimal("feesAmount").nullable()
+    val addOnsAmount = decimal("addOnsAmount").nullable()
+    val manualAdjustmentsAmount = decimal("manualAdjustmentsAmount").nullable()
+    val itemAddOnsAmount = decimal("itemAddOnsAmount").nullable()
+    val grossAmount = decimal("grossAmount").nullable()
 }
 
 // Other things tracked by ID

@@ -35,6 +35,31 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
     val bookingDiscountAdjustments by TicketBookingDiscount childrenOn TicketBookingDiscounts.parent
     val bookingItemAddOnAdjustments by TicketBookingItemAddOn childrenOn TicketBookingItemAddOns.parent
     
+    var discountsAmount by cacheColumn(Tickets.discountsAmount, {
+        bookingDiscountAdjustments.map{it.amount}
+                .reduce { amount1, amount2 -> amount1 + amount2 }
+    })
+    var feesAmount by cacheColumn(Tickets.feesAmount, {
+        bookingFeeAdjustments.map{it.amount}
+                .reduce { amount1, amount2 -> amount1 + amount2 }
+    })
+    var addOnsAmount by cacheColumn(Tickets.addOnsAmount, {
+        bookingAddOnAdjustments.map{it.amount}
+                .reduce { amount1, amount2 -> amount1 + amount2 }
+    })
+    var manualAdjustmentsAmount by cacheColumn(Tickets.manualAdjustmentsAmount, {
+        bookingManualAdjustments.map{it.amount}
+                .reduce { amount1, amount2 -> amount1 + amount2 }
+    })
+    var itemAddOnsAmount by cacheColumn(Tickets.itemAddOnsAmount, {
+        bookingItemAddOnAdjustments.map{it.amount}
+                .reduce { amount1, amount2 -> amount1 + amount2 }
+    })
+    var grossAmount by cacheColumn(Tickets.grossAmount, {
+        basePrice + discountsAmount!! + feesAmount!! + addOnsAmount!! +
+                manualAdjustmentsAmount!! + itemAddOnsAmount!!
+    })
+    
     @get:JsonProperty
     override val grossRevenue : BigDecimal get() {
         var result = basePrice
