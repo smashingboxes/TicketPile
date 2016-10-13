@@ -97,8 +97,8 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
             })
 
     fun populateCaches() {
-        grossAmount!!
         tickets.forEach(Ticket::populateCaches)
+        grossAmount!!
     }
     
     override fun delete() {

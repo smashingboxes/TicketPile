@@ -136,8 +136,8 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
             })
     
     fun populateCaches() {
-        bookingTotal!!
         items.forEach(BookingItem::populateCaches)
+        bookingTotal!!
     }
     
     private fun itemTotal(operator: (BookingItem) -> BigDecimal) : BigDecimal {
