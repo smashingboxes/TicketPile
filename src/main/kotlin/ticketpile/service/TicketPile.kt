@@ -64,9 +64,10 @@ open class TicketPile {
                 .title("TicketPile API")
                 .description("TicketPile is an ETL and integration testing layer for Advance. " +
                         "It transforms JSON data from the Advance API into a normalized relational database. " +
-                        "<p>" + 
-                        "It logs inconsistencies it finds in data it retrieves from Advance. It will also provides errors " +
-                        "when totals from imported data fail to match those on the Advance reservation.")
+                        "<p/>" + 
+                        "TicketPile logs warnings of inconsistencies it finds in data it retrieves from Advance. " +
+                        "It also logs errors when totals from imported data fail to match those on the Advance " +
+                        "reservation.")
                 .version("0.1")
                 .build())
         .securitySchemes(listOf(ApiKey("mykey", apiTokenHeader, "header")))

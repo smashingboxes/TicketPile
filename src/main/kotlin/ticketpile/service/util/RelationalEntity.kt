@@ -76,12 +76,13 @@ abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {
                     if(result == null) {
                         result = calculation()
                         column.setValue(o, desc, result)
+                        notifier()
                     }
                     result
                 },
                 setter = {
                     o, desc, value : T? ->
-                    column.setValue(o, desc, value)
+                    column.setValue(o, desc, null)
                     notifier()
                 }
         )

@@ -1,6 +1,8 @@
 package ticketpile.service.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import ticketpile.service.util.BigZero
+import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
 
 
@@ -19,6 +21,15 @@ import java.math.BigDecimal
  * 
  * Created by jonlatane on 8/28/16.
  */
+fun adjustmentTotal(adjustments : List<Adjustment<*>>) : BigDecimal {
+    return adjustments.map{it.amount}.fold(
+            initial = BigZero,
+            operation = {
+                amount1, amount2 ->
+                amount1 + amount2
+            }
+    )
+}
 
 interface Adjustment<SubjectType : Weighable> {
     var subject : SubjectType

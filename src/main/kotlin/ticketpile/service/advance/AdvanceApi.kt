@@ -2,6 +2,7 @@ package ticketpile.service.advance
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.joda.time.DateTime
+import ticketpile.service.util.BigZero
 import java.math.BigDecimal
 
 /**
@@ -97,7 +98,7 @@ class AdvanceLineTotal() {
     var type = -1
     var label = ""
     var quantity = -1
-    var price = BigDecimal.ZERO
+    var price = BigZero
     var unitPrice : BigDecimal? = null
 }
 
@@ -117,13 +118,13 @@ class AdvancePayment() {
 }
 
 class AdvancePricing() {
-    var baseAmount = BigDecimal.ZERO
-    var totalAmount = BigDecimal.ZERO
+    var baseAmount = BigZero
+    var totalAmount = BigZero
     var priceAdjustments = emptyList<AdvancePriceAdjustment>()
 }
 
 class AdvancePriceAdjustment(
-        var amount : BigDecimal = BigDecimal.ZERO,
+        var amount : BigDecimal = BigZero,
         var label : String = "",
         var promotionID : Int? = null,
         var type : Int = 0

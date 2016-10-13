@@ -8,6 +8,7 @@ import ticketpile.service.advance.AdvanceSyncError
 import ticketpile.service.advance.AdvanceSyncErrors
 import ticketpile.service.advance.SyncErrorLevel
 import ticketpile.service.database.*
+import ticketpile.service.util.BigZero
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
 import ticketpile.service.util.RelationalEntityClass
@@ -52,17 +53,12 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     @get:JsonProperty
     var location by Bookings.locationId
     
-    @get:JsonProperty
-    val bookingTotal :BigDecimal get() {
-        return grossRevenue
-    }
-    
     val _errors by AdvanceSyncError childrenOn AdvanceSyncErrors.parent
-    //@get:JsonProperty
+    @get:JsonProperty
     val errors : List<AdvanceSyncError> get() {
         return _errors.filter {it.errorType.level == SyncErrorLevel.error}
     }
-    //@get:JsonProperty
+    @get:JsonProperty
     val warnings : List<AdvanceSyncError> get() {
         return _errors.filter {it.errorType.level == SyncErrorLevel.warning}
     }
@@ -78,6 +74,81 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     }
     
     var matchesExternal by Bookings.matchesExternal
+    
+    @get:JsonProperty
+    var basePrice by cacheNotifierColumn(
+            column = Bookings.basePrice,
+            calculation = { itemTotal({it.basePrice!!}) },
+            notifier = {
+                this.grossAmount = null
+            })
+    
+    @get:JsonProperty
+    var discountsAmount by cacheNotifierColumn(
+            column = Bookings.discountsAmount,
+            calculation = { itemTotal({it.discountsAmount!!}) },
+            notifier = {
+                this.grossAmount = null
+            })
+    @get:JsonProperty
+    var feesAmount by cacheNotifierColumn(
+            column = Bookings.feesAmount,
+            calculation = { itemTotal({it.feesAmount!!}) },
+            notifier = {
+                this.grossAmount = null
+            })
+    @get:JsonProperty
+    var addOnsAmount by cacheNotifierColumn(
+            column = Bookings.addOnsAmount,
+            calculation = { itemTotal({it.addOnsAmount!!}) },
+            notifier = {
+                this.grossAmount = null
+            })
+    @get:JsonProperty
+    var manualAdjustmentsAmount by cacheNotifierColumn(
+            column = Bookings.manualAdjustmentsAmount,
+            calculation = { itemTotal({it.manualAdjustmentsAmount!!}) },
+            notifier = {
+                this.grossAmount = null
+            })
+    @get:JsonProperty
+    var itemAddOnsAmount by cacheNotifierColumn(
+            column = Bookings.itemAddOnsAmount,
+            calculation = { itemTotal({it.itemAddOnsAmount!!}) },
+            notifier = {
+                this.grossAmount = null
+            })
+    @get:JsonProperty
+    override var grossAmount : BigDecimal? by cacheNotifierColumn(
+            column = Bookings.grossAmount,
+            calculation = {
+                basePrice!! + discountsAmount!! + feesAmount!! + addOnsAmount!! +
+                        manualAdjustmentsAmount!! + itemAddOnsAmount!!
+            },
+            notifier = {
+                this.bookingTotal = null
+            })
+    @get:JsonProperty
+    var bookingTotal : BigDecimal? by cacheColumn(
+            column = Bookings.bookingTotal,
+            calculation = {
+                BigZero.max(grossAmount!!)
+            })
+    
+    fun populateCaches() {
+        bookingTotal!!
+        items.forEach(BookingItem::populateCaches)
+    }
+    
+    private fun itemTotal(operator: (BookingItem) -> BigDecimal) : BigDecimal {
+        return items.map(operator).fold(
+                initial = BigZero,
+                operation = {
+                    amount1, amount2 ->
+                    amount1 + amount2
+                }
+        )
+    }
     
     override fun delete() {
         items.forEach(BookingItem::delete)

@@ -118,7 +118,7 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
             .field(newFieldDefinition().type(GraphQLFloat)
                 .name("totalGross")
                 .dataFetcher {
-                    (it.source as Booking).bookingTotal.toFloat()
+                    (it.source as Booking).bookingTotal!!.toFloat()
                 }
                 .build())
             .field(newFieldDefinition().type(GraphQLList(GraphQLTypeReference("BookingItem")))
@@ -275,7 +275,7 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
         .field(newFieldDefinition().type(GraphQLFloat)
             .name("totalGross")
             .dataFetcher {
-                (it.source as Ticket).grossRevenue.toFloat()
+                (it.source as Ticket).grossAmount!!.toFloat()
             }
             .build())
         .build()

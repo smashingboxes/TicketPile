@@ -7,6 +7,8 @@ import ticketpile.service.database.BookingItems
 import ticketpile.service.database.Bookings
 import ticketpile.service.database.Events
 import ticketpile.service.model.Booking
+import ticketpile.service.util.BigZero
+import java.math.BigDecimal
 
 /**
  * Encapsulation of a query for [Booking]s.
@@ -74,12 +76,18 @@ internal class BookingQuery(
     val totalCount by lazy {
         result.count()
     }
-    val totalGross by lazy {
-        result.map{it.bookingTotal}.reduce{ amount1, amount2 -> amount1 + amount2 }
+    val totalGross : BigDecimal by lazy {
+        result.map{it.bookingTotal!!}.fold(
+                initial = BigZero,
+                operation = {
+                    amount1, amount2 -> amount1 + amount2
+                })
     }
-    val pageGross by lazy {
-        results.map(Booking::bookingTotal).reduce { 
+    val pageGross : BigDecimal by lazy {
+        results.map{it.bookingTotal!!}.fold(
+                initial = BigZero,
+                operation = { 
             amount1, amount2 -> amount1 + amount2 
-        }
+        })
     }
 }

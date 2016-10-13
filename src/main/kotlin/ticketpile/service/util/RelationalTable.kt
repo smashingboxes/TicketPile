@@ -10,6 +10,8 @@ import java.math.BigDecimal
  */
 val decimalScale = 30
 val decimalPrecision = 65
+val BigZero = BigDecimal.ZERO.setScale(decimalScale)
+val BigOne = BigDecimal.ONE.setScale(decimalScale)
 
 open class RelationalTable(val singularName : String) : IntIdTable() {
     var externalSource = varchar(name="externalHost", length = 128).nullable().index()

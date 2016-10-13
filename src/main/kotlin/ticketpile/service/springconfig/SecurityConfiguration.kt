@@ -98,7 +98,7 @@ internal object provider : AuthenticationProvider {
         val user = (authentication as BearerToken).user
         if(user != null)
             return authentication
-        return null
+        return authentication
     }
 }
 

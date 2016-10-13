@@ -19,6 +19,17 @@ object Bookings : RelationalTable("booking") {
     val matchesExternal = bool("matchesExternal").default(false).index()
     val locationId = integer("location")
     
+    //Caching columns
+    val basePrice = decimal("basePrice").nullable()
+    val discountsAmount = decimal("discountsAmount").nullable()
+    val feesAmount = decimal("feesAmount").nullable()
+    val addOnsAmount = decimal("addOnsAmount").nullable()
+    val manualAdjustmentsAmount = decimal("manualAdjustmentsAmount").nullable()
+    val itemAddOnsAmount = decimal("itemAddOnsAmount").nullable()
+    val grossAmount = decimal("grossAmount").nullable()
+    
+    val bookingTotal = decimal("bookingTotal").nullable()
+    
     val idxGraphQL = index(false, externalId, status, code)
 }
 
@@ -33,6 +44,15 @@ object Events : RelationalTable("event") {
 object BookingItems : RelationalTable("bookingItem") {
     val event = reference("event", Events)
     val booking = reference("booking", Bookings)
+
+    //Caching columns
+    val basePrice = decimal("basePrice").nullable()
+    val discountsAmount = decimal("discountsAmount").nullable()
+    val feesAmount = decimal("feesAmount").nullable()
+    val addOnsAmount = decimal("addOnsAmount").nullable()
+    val manualAdjustmentsAmount = decimal("manualAdjustmentsAmount").nullable()
+    val itemAddOnsAmount = decimal("itemAddOnsAmount").nullable()
+    val grossAmount = decimal("grossAmount").nullable()
 }
 
 object Tickets : ReferenceTable("ticket", BookingItems) {
@@ -47,6 +67,12 @@ object Tickets : ReferenceTable("ticket", BookingItems) {
     val manualAdjustmentsAmount = decimal("manualAdjustmentsAmount").nullable()
     val itemAddOnsAmount = decimal("itemAddOnsAmount").nullable()
     val grossAmount = decimal("grossAmount").nullable()
+    
+    val discountCount = integer("discountCount").nullable()
+    val feeCount = integer("feeCount").nullable()
+    val addOnCount = integer("addOnCount").nullable()
+    val manualAdjustmentCount = integer("manualAdjustmentCount").nullable()
+    val itemAddOnCount = integer("itemAddOnCount").nullable()
 }
 
 // Other things tracked by ID

@@ -3,6 +3,7 @@ package ticketpile.service.advance
 import org.jetbrains.exposed.sql.and
 import ticketpile.service.database.*
 import ticketpile.service.model.*
+import ticketpile.service.util.BigZero
 import ticketpile.service.util.decimalScale
 import ticketpile.service.util.flushEntityCache
 import java.math.BigDecimal
@@ -39,7 +40,7 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
                     (Bookings.externalId eq reservation.bookingID)
         }.firstOrNull()?.delete()
 
-        // Base imports
+        // Base import
         val bookingCustomer = importCustomer(reservation.customer)
         val booking = Booking.new {
             code = reservation.bookingCode
@@ -61,11 +62,14 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
         TicketAdjustmentTransform.transform(booking)
         flushEntityCache()
 
-        //Validation
+        // Validation
         validateImportResult(booking, reservation)
         flushEntityCache()
         booking.matchesExternal = booking.errors.isEmpty()
         printValidationResponse(booking)
+        
+        // Ensure the booking cache is filled
+        booking.populateCaches()
         
         return booking
     }
@@ -143,7 +147,7 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
                 BookingAddOn.new {
                     addOn = theAddOn
                     selection = option.label!!
-                    amount = theAddOn.basis.priceMethod(option.price ?: BigDecimal.ZERO, targetBooking)
+                    amount = theAddOn.basis.priceMethod(option.price ?: BigZero, targetBooking)
                     subject = targetBooking
                 }
             }
@@ -221,7 +225,7 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
                 BookingItemAddOn.new {
                     addOn = theAddOn
                     selection = option.label!!
-                    amount = theAddOn.basis.priceMethod(option.price ?: BigDecimal.ZERO, bookingItem)
+                    amount = theAddOn.basis.priceMethod(option.price ?: BigZero, bookingItem)
                     subject = bookingItem
                 }
             }

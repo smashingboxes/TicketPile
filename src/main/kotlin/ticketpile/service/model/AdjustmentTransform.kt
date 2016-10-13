@@ -6,6 +6,7 @@ import ticketpile.service.advance.SyncErrorType
 import ticketpile.service.database.TicketBookingAddOns
 import ticketpile.service.database.TicketBookingDiscounts
 import ticketpile.service.database.TicketBookingManualAdjustments
+import ticketpile.service.util.BigZero
 import ticketpile.service.util.RelationalEntity
 import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
@@ -25,13 +26,7 @@ internal val transforms = arrayOf(
 )
 interface Weighable {
     val tickets : List<Ticket>
-    val grossRevenue : BigDecimal get() {
-        var result = BigDecimal.ZERO
-        tickets.forEach {
-            result += it.grossRevenue
-        }
-        return result
-    }
+    val grossAmount : BigDecimal?
 }
 
 /**
@@ -57,24 +52,26 @@ val weighByApplicableTicketCount = {
     if(isReallyApplicable(ticket, weighable, applicable))
         amount.setScale(decimalScale) / BigDecimal(applicableTickets.count()).setScale(decimalScale)
     else
-        BigDecimal.ZERO.setScale(decimalScale)
+        BigZero
 }
 val weighByApplicableGrossRevenue = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
     val applicableTickets = applicableTickets(weighable, applicable)
     if(isReallyApplicable(ticket, weighable, applicable)) {
-        val applicableGross = applicableTickets.map{it.grossRevenue}.reduce { 
-            amount1, amount2 ->  
-            amount1 + amount2
-        }
-        if(applicableGross == BigDecimal.ZERO.setScale(applicableGross.scale()))
+        val applicableGross = applicableTickets.map { it.grossAmount }.fold(
+                initial = BigZero,
+                operation = {
+                    amount1, amount2 ->
+                    amount1!! + amount2!!
+                })
+        if(applicableGross == BigZero)
             weighByApplicableTicketCount(amount, weighable, ticket, applicable)
         else 
             amount.setScale(decimalScale) *
-                    ticket.grossRevenue.setScale(decimalScale) /
+                    ticket.grossAmount!!.setScale(decimalScale) /
                     applicableGross.setScale(decimalScale)
     } else
-        BigDecimal.ZERO.setScale(decimalScale)
+        BigZero
 }
 
 /**
