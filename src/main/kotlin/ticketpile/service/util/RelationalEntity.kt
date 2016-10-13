@@ -69,7 +69,7 @@ abstract class RelationalEntity(id: EntityID<Int>) : IntEntity(id) {
     }
 
     fun <T> cacheNotifierColumn(column : Column<T?>, calculation : () -> T, notifier : () -> Unit) : WrappedColumn<T?> {
-        return WrappedColumn<T?>(
+        return WrappedColumn(
                 getter = {
                     o, desc ->
                     var result = column.getValue(o, desc)

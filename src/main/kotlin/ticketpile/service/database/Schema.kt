@@ -29,8 +29,11 @@ object Bookings : RelationalTable("booking") {
     val grossAmount = decimal("grossAmount").nullable()
     
     val bookingTotal = decimal("bookingTotal").nullable()
-    
-    val idxGraphQL = index(false, externalId, status, code)
+
+    /**
+     * @see [ticketpile.service.graphql.BookingQuery.bookingOp]
+     */
+    val idxGraphQL = index(false, locationId, externalId, status, code)
 }
 
 object Events : RelationalTable("event") {

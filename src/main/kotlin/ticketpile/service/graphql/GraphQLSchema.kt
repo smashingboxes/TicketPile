@@ -65,18 +65,21 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
             }.build())
         .field(newFieldDefinition().type(GraphQLFloat)
             .name("pageGross")
+            .description("The total gross for bookings on this page (defined by limit and offset)")
             .dataFetcher {
                (it.source as BookingQuery).pageGross.toFloat()
             }
             .build())
-        //.field(newFieldDefinition().type(GraphQLFloat)
-            //.name("totalGross")
-            //.dataFetcher {
-            //    (it.source as BookingQuery).totalGross
-            //}
-            //.build())
+        .field(newFieldDefinition().type(GraphQLFloat)
+            .name("totalGross")
+            .description("The total gross for all bookings found in this search")
+            .dataFetcher {
+                (it.source as BookingQuery).totalGross.toFloat()
+            }
+            .build())
         .field(newFieldDefinition().type(GraphQLList(GraphQLTypeReference("Booking")))
             .name("results")
+            .description("A list of bookings that matched the query")
             .dataFetcher {
                 (it.source as BookingQuery).results
             }
@@ -99,6 +102,7 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
         newObject().name("Booking")
             .field(newFieldDefinition().type(GraphQLInt)
                 .name("id")
+                .description("The Advance Booking ID for this booking")
                 .dataFetcher {
                     (it.source as Booking).externalId!!
                 }

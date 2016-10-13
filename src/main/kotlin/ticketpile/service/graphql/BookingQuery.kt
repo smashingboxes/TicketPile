@@ -1,7 +1,6 @@
 package ticketpile.service.graphql
 
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.joda.time.DateTime
 import ticketpile.service.database.BookingItems
 import ticketpile.service.database.Bookings
@@ -17,7 +16,7 @@ import java.math.BigDecimal
  */
 val minDate = DateTime("1000-01-01T00:00:00")
 val maxDate = DateTime("9999-12-31T00:00:00")
-internal class BookingQuery(
+class BookingQuery(
         /**
          * When no products are provided, will search *all* products.
          */
@@ -53,7 +52,7 @@ internal class BookingQuery(
             }
         else null
     }
-    private val result = Booking.find {
+    val bookingOp : SqlExpressionBuilder.()-> Op<Boolean> = {
         Bookings.locationId inList locations and
         (if(eventBookingIds != null)
             Bookings.externalId inList eventBookingIds?.map { it.first }!!
@@ -70,6 +69,7 @@ internal class BookingQuery(
         else
             Bookings.code neq "BookingCodeThatCan'tExist")
     }
+    private val result = Booking.find(bookingOp)
     val results: List<Booking> by lazy {
         result.limit(limit, offset = offset).toList()
     }
@@ -77,17 +77,21 @@ internal class BookingQuery(
         result.count()
     }
     val totalGross : BigDecimal by lazy {
-        result.map{it.bookingTotal!!}.fold(
+        Bookings.slice(Bookings.bookingTotal.sum())
+            .select(bookingOp)
+                .first()[Bookings.bookingTotal.sum()]!!
+        /*result.map{it.bookingTotal!!}.fold(
                 initial = BigZero,
                 operation = {
                     amount1, amount2 -> amount1 + amount2
-                })
+                })*/
     }
     val pageGross : BigDecimal by lazy {
-        results.map{it.bookingTotal!!}.fold(
+        results.map { it.bookingTotal!! }.fold(
                 initial = BigZero,
-                operation = { 
-            amount1, amount2 -> amount1 + amount2 
-        })
+                operation = {
+                    amount1, amount2 ->
+                    amount1 + amount2
+                })
     }
 }
