@@ -86,28 +86,28 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     @get:JsonProperty
     var discountsAmount by cacheNotifierColumn(
             column = Bookings.discountsAmount,
-            calculation = { itemTotal({it.discountsAmount!!}) },
+            calculation = { adjustmentTotal(discounts) },
             notifier = {
                 this.grossAmount = null
             })
     @get:JsonProperty
     var feesAmount by cacheNotifierColumn(
             column = Bookings.feesAmount,
-            calculation = { itemTotal({it.feesAmount!!}) },
+            calculation = { adjustmentTotal(fees) },
             notifier = {
                 this.grossAmount = null
             })
     @get:JsonProperty
     var addOnsAmount by cacheNotifierColumn(
             column = Bookings.addOnsAmount,
-            calculation = { itemTotal({it.addOnsAmount!!}) },
+            calculation = { adjustmentTotal(addOns) },
             notifier = {
                 this.grossAmount = null
             })
     @get:JsonProperty
     var manualAdjustmentsAmount by cacheNotifierColumn(
             column = Bookings.manualAdjustmentsAmount,
-            calculation = { itemTotal({it.manualAdjustmentsAmount!!}) },
+            calculation = { adjustmentTotal(manualAdjustments) },
             notifier = {
                 this.grossAmount = null
             })

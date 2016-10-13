@@ -79,7 +79,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
     @get:JsonProperty
     var itemAddOnsAmount : BigDecimal? by cacheNotifierColumn(
             column = BookingItems.itemAddOnsAmount,
-            calculation = { ticketTotal({it.itemAddOnsAmount!!}) },
+            calculation = { adjustmentTotal(addOns) },
             notifier = {
                 this.grossAmount = null
                 this.booking.itemAddOnsAmount = null
