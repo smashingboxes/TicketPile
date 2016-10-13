@@ -49,7 +49,7 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                         code = it.arguments["code"] as String?,
                         id = it.arguments["id"] as Int?,
                         status = it.arguments["status"] as String?,
-                        limit = Math.max(it.arguments["limit"] as Int, 100),
+                        limit = Math.min(it.arguments["limit"] as Int, 200),
                         offset = it.arguments["offset"] as Int
                     )
             }.build())
