@@ -18,52 +18,53 @@ val minDate = DateTime("1000-01-01T00:00:00")
 val maxDate = DateTime("9999-12-31T00:00:00")
 class BookingQuery(
         /**
-         * When no products are provided, will search *all* products.
-         */
-        var products : List<Int> = emptyList<Int>(),
-        /**
          * When no locations are provided, will search *no* locations.
          */
-        var locations : List<Int> = listOf(-1),
-        var eventsAfter : DateTime? = null,
-        var eventsBefore : DateTime? = null,
-        var status : String? = null,
-        var code : String? = null,
-        var id : Int? = null,
+        var locations : List<Int>,
+        var eventsAfter : DateTime?,
+        var eventsBefore : DateTime?,
+        var status : List<String>,
+        var code : String?,
+        var id : Int?,
         var limit : Int,
         var offset : Int
 ) {
-    private val eventBookingIds by lazy {
-        if(eventsAfter != null || eventsBefore != null)
-            (Events innerJoin BookingItems innerJoin Bookings)
-                    .slice(Events.id, BookingItems.event, BookingItems.booking, Bookings.id)
-            .select {
-                Events.locationId inList locations and
-                (if (eventsAfter != null)
-                    Events.startTime greaterEq eventsAfter!!
-                else
-                    Events.startTime greaterEq minDate) and
-                (if (eventsBefore != null)
-                    Events.startTime lessEq eventsBefore!!
-                else
-                    Events.startTime lessEq maxDate)
-            }.map {
-                it[Bookings.id].value to it[Events.id].value
+    private val eventBookingIds : Set<Int>? by lazy {
+        if(eventsAfter != null || eventsBefore != null) {
+            val result = setOf(*(Events innerJoin BookingItems innerJoin Bookings)
+                    .slice(Events.id, BookingItems.event, BookingItems.booking, Bookings.id, Bookings.externalId)
+                    .select {
+                        Events.locationId inList locations and
+                                (if (eventsAfter != null)
+                                    Events.startTime greaterEq eventsAfter!!
+                                else
+                                    Events.startTime greaterEq minDate) and
+                                (if (eventsBefore != null)
+                                    Events.startTime lessEq eventsBefore!!
+                                else
+                                    Events.startTime lessEq maxDate)
+                    }.map {
+                it[Bookings.externalId]!!
+            }.toTypedArray())
+            if(id != null) {
+                result.intersect(setOf(id!!))
+            } else {
+                result
             }
-        else null
+        } else null
     }
-    val bookingOp : SqlExpressionBuilder.()-> Op<Boolean> = {
+    private val bookingOp : SqlExpressionBuilder.() -> Op<Boolean> = {
         Bookings.locationId inList locations and
         (if(eventBookingIds != null)
-            Bookings.externalId inList eventBookingIds?.map { it.first }!!
+            Bookings.externalId inList eventBookingIds!!.toList()
         else if (id != null)
             Bookings.externalId eq id
         else
             Bookings.externalId neq -1) and
-        (if (status != null)
-            Bookings.status eq status!!
+        (if(status.isNotEmpty())
+            Bookings.status inList status
         else
-            Bookings.status neq "BookingStatusThatCan'tExist") and
+            Bookings.status neq "StatusThatCan'tExist") and
         (if (code != null)
             Bookings.code eq code!!
         else
@@ -76,17 +77,37 @@ class BookingQuery(
     val totalCount by lazy {
         result.count()
     }
-    val totalGross : BigDecimal by lazy {
-        Bookings.slice(Bookings.bookingTotal.sum())
-            .select(bookingOp)
-                .first()[Bookings.bookingTotal.sum()]!!
-        /*result.map{it.bookingTotal!!}.fold(
-                initial = BigZero,
-                operation = {
-                    amount1, amount2 -> amount1 + amount2
-                })*/
+    fun total(column : Column<BigDecimal?>) : BigDecimal {
+        return Bookings.slice(column.sum())
+                .select(bookingOp)
+                .first()[column.sum()]!!
     }
-    val pageGross : BigDecimal by lazy {
+    val totalAmount: BigDecimal by lazy {
+        total(Bookings.bookingTotal)
+    }
+    val basePrice: BigDecimal by lazy {
+        total(Bookings.basePrice)
+    }
+    val discountsAmount: BigDecimal by lazy {
+        total(Bookings.discountsAmount)
+    }
+    val feesAmount: BigDecimal by lazy {
+        total(Bookings.feesAmount)
+    }
+    val addOnsAmount: BigDecimal by lazy {
+        total(Bookings.addOnsAmount)
+    }
+    val manualAdjustmentsAmount: BigDecimal by lazy {
+        total(Bookings.manualAdjustmentsAmount)
+    }
+    val itemAddOnsAmount: BigDecimal by lazy {
+        total(Bookings.itemAddOnsAmount)
+    }
+    val grossAmount: BigDecimal by lazy {
+        total(Bookings.grossAmount)
+    }
+    
+    val pageTotal: BigDecimal by lazy {
         results.map { it.bookingTotal!! }.fold(
                 initial = BigZero,
                 operation = {

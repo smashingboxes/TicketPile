@@ -43,9 +43,25 @@ open class TPGraphQLController {
         try {
            variables = body["variables"] as Map<String, Any>
         } catch(t:Throwable) {}
-        val result = transaction {
+
+        val executionResult = transaction {
+            TicketPileGraphQL.execute(query, null as Any?, variables)
+        }
+        val result : Map<String, Any>
+        if (executionResult.errors?.count() ?: 0 > 0) {
+            result = mutableMapOf<String, Any>()
+            result.put("errors", executionResult.errors.map{
+                "${it.javaClass.simpleName}: ${it.locations}"
+            })
+            println("Errors: {${executionResult.errors}}")
+        } else {
+            result = executionResult.data as Map<String,Any>
+        }
+        
+        
+        /*val result = transaction {
             TicketPileGraphQL.execute(query, null as Any?, variables).data
-        } as Map<String, Any>
+        } as Map<String, Any>*/
 
         return ResponseEntity.ok<Map<String, Any>>(result)
     }

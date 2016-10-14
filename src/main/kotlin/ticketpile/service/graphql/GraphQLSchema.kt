@@ -7,6 +7,8 @@ import graphql.schema.GraphQLFieldDefinition.newFieldDefinition
 import graphql.schema.GraphQLObjectType.newObject
 import org.joda.time.DateTime
 import ticketpile.service.model.*
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 /**
  * The schema for GraphQL access to TicketPile.
@@ -24,15 +26,15 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
             .argument(GraphQLArgument("locations",
                     "Locations to search in", GraphQLList(GraphQLInt), listOf(-1)))
             .argument(GraphQLArgument("withEventsAfter",
-                    "Limit bookings to those with events on a range of dates", GraphQLList(GraphQLString), null))
+                    "Limit bookings to those with events on a range of dates", GraphQLString, null))
             .argument(GraphQLArgument("withEventsBefore",
-                    "Limit bookings to those with events on a range of dates", GraphQLList(GraphQLString), null))
+                    "Limit bookings to those with events on a range of dates", GraphQLString, null))
             .argument(GraphQLArgument("id",
                     "An Advance booking ID to search for", GraphQLInt, null))
             .argument(GraphQLArgument("code",
                     "A booking code to search for", GraphQLString, null))
-            .argument(GraphQLArgument("id",
-                    "Find bookings by status", GraphQLString, null))
+            .argument(GraphQLArgument("status",
+                    "Find bookings by status", GraphQLList(GraphQLString), emptyList<String>()))
             .argument(GraphQLArgument("limit",
                     "How many bookings to find", GraphQLInt, 50))
             .argument(GraphQLArgument("offset",
@@ -48,7 +50,7 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                         else null,
                         code = it.arguments["code"] as String?,
                         id = it.arguments["id"] as Int?,
-                        status = it.arguments["status"] as String?,
+                        status = it.arguments["status"] as List<String>,
                         limit = Math.min(it.arguments["limit"] as Int, 200),
                         offset = it.arguments["offset"] as Int
                     )
@@ -63,18 +65,18 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
             .dataFetcher {
                 (it.source as BookingQuery).totalCount
             }.build())
-        .field(newFieldDefinition().type(GraphQLFloat)
-            .name("pageGross")
+        .field(newFieldDefinition().type(GraphQLBigDecimal)
+            .name("pageTotal")
             .description("The total gross for bookings on this page (defined by limit and offset)")
             .dataFetcher {
-               (it.source as BookingQuery).pageGross.toFloat()
+               (it.source as BookingQuery).pageTotal
             }
             .build())
-        .field(newFieldDefinition().type(GraphQLFloat)
-            .name("totalGross")
+        .field(newFieldDefinition().type(GraphQLBigDecimal)
+            .name("totalAmount")
             .description("The total gross for all bookings found in this search")
             .dataFetcher {
-                (it.source as BookingQuery).totalGross.toFloat()
+                (it.source as BookingQuery).totalAmount
             }
             .build())
         .field(newFieldDefinition().type(GraphQLList(GraphQLTypeReference("Booking")))
@@ -119,10 +121,10 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                     (it.source as Booking).status
                 }
                 .build())
-            .field(newFieldDefinition().type(GraphQLFloat)
-                .name("totalGross")
+            .field(newFieldDefinition().type(GraphQLBigDecimal)
+                .name("totalAmount")
                 .dataFetcher {
-                    (it.source as Booking).bookingTotal!!.toFloat()
+                    (it.source as Booking).bookingTotal!!
                 }
                 .build())
             .field(newFieldDefinition().type(GraphQLList(GraphQLTypeReference("BookingItem")))
@@ -177,10 +179,10 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                     (it.source as DiscountAdjustment<*>).discount.description
                 }
                 .build())
-            .field(newFieldDefinition().type(GraphQLFloat)
+            .field(newFieldDefinition().type(GraphQLBigDecimal)
                 .name("amount")
                 .dataFetcher {
-                    (it.source as DiscountAdjustment<*>).amount.toFloat()
+                    (it.source as DiscountAdjustment<*>).amount
                 }
                 .build())
             .build()
@@ -201,10 +203,10 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                     (it.source as AddOnAdjustment<*>).selection
                 }
                 .build())
-            .field(newFieldDefinition().type(GraphQLFloat)
+            .field(newFieldDefinition().type(GraphQLBigDecimal)
                 .name("amount")
                 .dataFetcher {
-                    (it.source as AddOnAdjustment<*>).amount.toFloat()
+                    (it.source as AddOnAdjustment<*>).amount
                 }
                 .build())
             .build()
@@ -217,10 +219,10 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                     (it.source as ManualAdjustment<*>).description
                 }
                 .build())
-            .field(newFieldDefinition().type(GraphQLFloat)
+            .field(newFieldDefinition().type(GraphQLBigDecimal)
                 .name("amount")
                 .dataFetcher {
-                    (it.source as ManualAdjustment<*>).amount.toFloat()
+                    (it.source as ManualAdjustment<*>).amount
                 }
                 .build())
             .build()
@@ -233,10 +235,10 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                     (it.source as FeeAdjustment<*>).description
                 }
                 .build())
-            .field(newFieldDefinition().type(GraphQLFloat)
+            .field(newFieldDefinition().type(GraphQLBigDecimal)
                 .name("amount")
                 .dataFetcher {
-                    (it.source as FeeAdjustment<*>).amount.toFloat()
+                    (it.source as FeeAdjustment<*>).amount
                 }
                 .build())
             .build()
@@ -263,23 +265,23 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                 (it.source as Ticket).code
             }
             .build())
-        .field(newFieldDefinition().type(GraphQLFloat)
+        .field(newFieldDefinition().type(GraphQLBigDecimal)
             .name("basePrice")
             .dataFetcher {
-                (it.source as Ticket).basePrice.toFloat()
+                (it.source as Ticket).basePrice
             }
             .build())
-        .field(newFieldDefinition().type(GraphQLFloat)
+        .field(newFieldDefinition().type(GraphQLBigDecimal)
             .name("discountedPrice")
             .dataFetcher {
-                (it.source as Ticket).discountedPrice.toFloat()
+                (it.source as Ticket).discountedPrice
             }
             .build())
 
-        .field(newFieldDefinition().type(GraphQLFloat)
-            .name("totalGross")
+        .field(newFieldDefinition().type(GraphQLBigDecimal)
+            .name("totalAmount")
             .dataFetcher {
-                (it.source as Ticket).grossAmount!!.toFloat()
+                (it.source as Ticket).grossAmount!!
             }
             .build())
         .build()
