@@ -22,11 +22,19 @@ class AdvanceAuthResponse() {
 }
 
 class AdvanceUserRespose() {
-    lateinit var user : AdvanceUser
+    var user : AdvanceUser? = null
 }
 
 class AdvanceUser() {
     lateinit var emailAddress : String
+    lateinit var merchants : List<AdvanceMerchant>
+}
+
+class AdvanceMerchant() {
+    lateinit var merchantID : String
+    val locationId :Int get() {
+        return merchantID.toInt()
+    }
 }
 
 class AdvanceModifiedBookingsResponse() {

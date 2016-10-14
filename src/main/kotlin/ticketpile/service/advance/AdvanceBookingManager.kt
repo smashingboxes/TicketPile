@@ -34,7 +34,7 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
      */
     fun importByAdvanceReservation(reservation:AdvanceReservation) : Booking {
 
-        //Delete the booking if it already exists.
+        // Delete the booking if it already exists.
         Booking.find {
             (Bookings.externalSource eq source) and
                     (Bookings.externalId eq reservation.bookingID)
@@ -58,11 +58,11 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
         importFees(booking, reservation)
         flushEntityCache()
 
-        // Transformation
+        // Transformation of adjustments onto tickets
         TicketAdjustmentTransform.transform(booking)
         flushEntityCache()
 
-        // Validation
+        // Validation of import
         validateImportResult(booking, reservation)
         flushEntityCache()
         booking.matchesExternal = booking.errors.isEmpty()

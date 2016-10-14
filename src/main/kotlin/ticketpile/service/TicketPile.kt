@@ -25,18 +25,11 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
-import ticketpile.service.advance.AdvanceManager
-import ticketpile.service.advance.bookingQueueSync
-import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
 import ticketpile.service.database.initializeModel
 import ticketpile.service.security.initializeSecurity
 import ticketpile.service.springconfig.apiTokenHeader
 import ticketpile.service.util.transaction
-import java.io.PrintWriter
-import java.io.StringWriter
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
 
 /**
@@ -49,7 +42,6 @@ import javax.sql.DataSource
 @SpringBootApplication(exclude = arrayOf( SecurityAutoConfiguration::class ))
 @EnableSwagger2
 @EnableConfigurationProperties
-//@EnableGraphQLServer
 open class TicketPile {
     companion object {
         @JvmStatic fun main(args: Array<String>) {
@@ -67,7 +59,11 @@ open class TicketPile {
                         "<p/>" + 
                         "TicketPile logs warnings of inconsistencies it finds in data it retrieves from Advance. " +
                         "It also logs errors when totals from imported data fail to match those on the Advance " +
-                        "reservation.")
+                        "reservation." + 
+                        "<p/>" +
+                        "TicketPile's <a href=\"/graphiql.html\">GraphQL API</a> supports SSO with Advance and " +
+                        "allows for highly efficient querying of Advance data."
+                )
                 .version("0.1")
                 .build())
         .securitySchemes(listOf(ApiKey("mykey", apiTokenHeader, "header")))
@@ -95,30 +91,6 @@ open class TicketPile {
             null
         )
     }
-/*
-    @Bean
-    //@ConditionalOnMissingBean
-    //@Throws(ClassNotFoundException::class)
-    open fun graphQLSchemaLocator(): GraphQLSchemaLocator {
-        val graphQLSchemaHolders = mutableMapOf<String, GraphQLSchemaHolder>()
-        graphQLSchemaHolders[TicketPileGraphQLSchema.queryType.name] = 
-            GraphQLSchemaHolder(
-                    TicketPileGraphQLSchema.queryType.name,
-                    TicketPileGraphQLSchema,
-                    GraphQLSchemaConfig(),
-                    ConcurrentHashMap()
-            )
-        //val graphQLSchemaBuilder = graphQLSchemaBuilder()
-        //val schemaClasses = initialSchemaClassesSet()
-        /*if (schemaClasses.size > 0) {
-            for (schema in schemaClasses) {
-                val schemaHolder = graphQLSchemaBuilder.buildSchema(schema)
-                graphQLSchemaHolders.put(schemaHolder.getSchemaName(), schemaHolder)
-            }
-        }*/
-        return GraphQLSchemaLocator(graphQLSchemaHolders)
-    }
-    */
 }
 
 @Component
@@ -166,36 +138,9 @@ open class DBConfig() {
     var password = ""
 }
 
-fun wrapTask(task: () -> Unit, taskName: String) : () -> Unit {
-    return {
-        try {
-            task()
-        } catch(t: Throwable) {
-            val sw = StringWriter()
-            t.printStackTrace(PrintWriter(sw))
-            println("$taskName error: $sw")
-        }
-    }
-}
-
 @Component
-open class BackgroundJobs() : CommandLineRunner, Ordered {
-    override fun run(vararg args : String) {
-        val scheduler = Executors.newScheduledThreadPool(13)
-        scheduler.scheduleAtFixedRate(
-                wrapTask(bookingQueueSync, "Booking Queue Sync"),
-                0, AdvanceManager.syncPeriodSeconds, TimeUnit.SECONDS
-        )
-        // Schedule multiple tasks for booking sync
-        for(offset in 1..3) {
-            scheduler.scheduleAtFixedRate(
-                    wrapTask(individualBookingSync, "Individual Booking Sync"),
-                    0, 10, TimeUnit.MILLISECONDS
-            )
-        }
-    }
-
-    override fun getOrder(): Int {
-        return 2
-    }
+@PropertySource("classpath:advance_sso.properties")
+@ConfigurationProperties(prefix = "advance.sso")
+open class AdvanceSSOConfig() {
+    lateinit var host : String
 }

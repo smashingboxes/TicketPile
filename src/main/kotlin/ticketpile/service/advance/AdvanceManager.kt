@@ -26,7 +26,7 @@ import java.sql.Connection
  * 
  * Created by jonlatane on 10/10/16.
  */
-abstract class AdvanceManager {
+open class AdvanceManager {
     companion object {
         internal val restTemplate = RestTemplate()
         internal val dateTimeFormatter = DateTimeFormat.forPattern(
@@ -224,9 +224,9 @@ abstract class AdvanceManager {
         return responseEntity.body
     }
 
-    val currentUser : AdvanceUser get() {
+    val currentUser : AdvanceUser? get() {
         return api20Request(
-                "/authorization/current-user",
+                "/authorize/current-user",
                 AdvanceUserRespose::class.java
         ).user
     }

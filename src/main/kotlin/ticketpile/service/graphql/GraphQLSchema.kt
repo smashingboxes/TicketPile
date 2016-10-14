@@ -1,24 +1,24 @@
 package ticketpile.service.graphql
 
 import graphql.GraphQL
-import graphql.Scalars.*
+import graphql.Scalars.GraphQLInt
+import graphql.Scalars.GraphQLString
 import graphql.schema.*
 import graphql.schema.GraphQLFieldDefinition.newFieldDefinition
 import graphql.schema.GraphQLObjectType.newObject
 import org.joda.time.DateTime
 import ticketpile.service.model.*
-import java.math.BigDecimal
-import java.math.RoundingMode
+import ticketpile.service.security.ApplicationUser
 
 /**
  * The schema for GraphQL access to TicketPile.
  * 
  * Created by jonlatane on 10/11/16.
  */
-val TicketPileGraphQL : GraphQL by lazy {
-    GraphQL(TicketPileGraphQLSchema)
+fun createGraphQL(user : ApplicationUser) : GraphQL {
+    return GraphQL(createGraphQLSchema(user))
 }
-val TicketPileGraphQLSchema : GraphQLSchema by lazy {
+private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
     val queryRoot: GraphQLObjectType =
         newObject().name("QueryRoot")
         .field(newFieldDefinition().type(GraphQLTypeReference("BookingsResult"))
@@ -41,7 +41,8 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
                     "Offset for the limit parameter", GraphQLInt, 0))
             .dataFetcher {
                     BookingQuery(
-                        locations = it.arguments["locations"] as List<Int>,
+                        locations = (it.arguments["locations"] as List<Int>)
+                                .intersect(user.locations).toList(),
                         eventsBefore = if (it.arguments["withEventsBefore"] != null)
                             DateTime(it.arguments["withEventsBefore"] as String)
                         else null,
@@ -287,7 +288,7 @@ val TicketPileGraphQLSchema : GraphQLSchema by lazy {
         .build()
     
     // Create the schema
-    (GraphQLSchema.newSchema()
+    return (GraphQLSchema.newSchema()
         .query(queryRoot))
         .build(setOf(
             bookingsResult, 

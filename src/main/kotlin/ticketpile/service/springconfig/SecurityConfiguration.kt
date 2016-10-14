@@ -1,5 +1,6 @@
 package ticketpile.service.springconfig
 
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AbstractAuthenticationToken
 import org.springframework.security.authentication.AuthenticationProvider
@@ -12,8 +13,12 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter
+import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
-import ticketpile.service.security.User
+import ticketpile.service.AdvanceSSOConfig
+import ticketpile.service.advance.AdvanceManager
+import ticketpile.service.security.AdvanceSSOUser
+import ticketpile.service.security.ApplicationUser
 import ticketpile.service.security.UserAuthKey
 import ticketpile.service.security.UserAuthKeys
 import ticketpile.service.util.transaction
@@ -31,11 +36,13 @@ val apiTokenHeader = "Bearer"
 @Configuration
 @EnableWebSecurity
 open class SecurityConfiguration : WebSecurityConfigurerAdapter() {
+    @Autowired
+    lateinit var bearerFilter : BearerTokenFilter
     override fun configure(web : WebSecurity) {
-        // Allow Swagger UI stuff through. No one without
+        // Allow Swagger UI and GraphiQL stuff through. No one without
         // the admin credentials can hit real data.
         web.ignoring().antMatchers(
-                "/",
+                "/graphiql.html",
                 "/swagger-ui.html",
                 "/webjars/springfox-swagger-ui/**/*",
                 "/swagger-resources",
@@ -62,7 +69,7 @@ open class SecurityConfiguration : WebSecurityConfigurerAdapter() {
                 .httpBasic().disable()
                 .formLogin().disable()
                 .logout().disable()
-        .addFilterBefore(BearerTokenFilter(), AnonymousAuthenticationFilter::class.java)
+        .addFilterBefore(bearerFilter, AnonymousAuthenticationFilter::class.java)
     }
     
     override fun configure(auth: AuthenticationManagerBuilder) {
@@ -70,17 +77,33 @@ open class SecurityConfiguration : WebSecurityConfigurerAdapter() {
     }
 }
 
+@Component
 class BearerTokenFilter() : OncePerRequestFilter() {
+    @Autowired
+    lateinit var ssoConfig : AdvanceSSOConfig
+    
     override fun doFilterInternal(
             request: HttpServletRequest?,
             response: HttpServletResponse?,
             filterChain: FilterChain?
     ) {
         val bearer : String = request?.getHeader(apiTokenHeader) ?: ""
-        val user = transaction {
+        var user : ApplicationUser? = transaction {
             UserAuthKey.find {
                 UserAuthKeys.authKey eq bearer
             }.firstOrNull()?.user
+        }
+        if(user == null // Allow user to login with Advance credentials
+                && bearer.isNotBlank() // for the GraphQL endpoint.
+                && request?.requestURI?.startsWith("/graphql") ?: false
+        ) {
+            try {
+                user = AdvanceSSOUser(
+                        AdvanceManager(ssoConfig.host, bearer, 0).currentUser!!
+                )
+            } catch(t: Throwable) {
+                println("Advance SSO failed - user not authenticated: $t")
+            }
         }
 
         val auth = BearerToken(user)
@@ -98,12 +121,12 @@ internal object provider : AuthenticationProvider {
         val user = (authentication as BearerToken).user
         if(user != null)
             return authentication
-        return authentication
+        return null
     }
 }
 
-internal class BearerToken(val user : User?) : AbstractAuthenticationToken(emptyList()) {
-    override fun getCredentials(): User? {
+internal class BearerToken(val user : ApplicationUser?) : AbstractAuthenticationToken(emptyList()) {
+    override fun getCredentials(): ApplicationUser? {
         return user
     }
 

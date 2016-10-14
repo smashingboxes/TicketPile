@@ -4,9 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.selectAll
+import ticketpile.service.advance.AdvanceSyncTasks
 import ticketpile.service.util.ReferenceTable
 import ticketpile.service.util.RelationalEntity
 import ticketpile.service.util.RelationalTable
+import ticketpile.service.util.transaction
 import java.math.BigInteger
 import java.security.SecureRandom
 
@@ -28,7 +31,7 @@ object UserAuthKeys : ReferenceTable("userAuthKey", Users) {
     val expirationDate = datetime("expirationDate").nullable()
 }
 
-class User(id: EntityID<Int>) : RelationalEntity(id) {
+class User(id: EntityID<Int>) : RelationalEntity(id), ApplicationUser {
     companion object : IntEntityClass<User>(Users)
     
     @get:JsonProperty
@@ -37,6 +40,15 @@ class User(id: EntityID<Int>) : RelationalEntity(id) {
     var name by Users.name
     
     val authKeys by UserAuthKey referrersOn UserAuthKeys.parent
+    
+    override val administrator = true
+    override val locations by lazy {
+        transaction {
+            AdvanceSyncTasks.slice(AdvanceSyncTasks.advanceLocationId)
+                .selectAll().groupBy(AdvanceSyncTasks.advanceLocationId)
+                .map{it[AdvanceSyncTasks.advanceLocationId]}
+        }
+    }
 }
 
 class UserAuthKey(id: EntityID<Int>) : RelationalEntity(id) {
