@@ -3,6 +3,7 @@ package ticketpile.service.advance
 import org.jetbrains.exposed.sql.and
 import ticketpile.service.database.AddOns
 import ticketpile.service.database.Bookings
+import ticketpile.service.database.Customers
 import ticketpile.service.database.PersonCategories
 import ticketpile.service.model.*
 import ticketpile.service.model.transformation.TicketAdjustmentTransform
@@ -43,8 +44,12 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
                     (Bookings.externalId eq reservation.bookingID)
         }.firstOrNull()?.delete()
 
+        val bookingCustomer = Customer.find {
+            (Customers.externalSource eq source) and
+                    (Customers.externalId eq reservation.customer.customerID)
+        }.first()
+        
         // Base import
-        val bookingCustomer = importCustomer(reservation.customer)
         val booking = Booking.new {
             code = reservation.bookingCode
             externalId = reservation.bookingID

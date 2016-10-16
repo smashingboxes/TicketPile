@@ -69,7 +69,7 @@ open class AdvanceLocationManager(host: String, authorizationKey: String, locati
     private fun importDiscount(label : String) {
         val discountName = getDiscountName(label)
         transaction {
-            val discount = Discount.find {
+            Discount.find {
                 (Discounts.externalSource eq source) and
                         (Discounts.externalId eq null as Int?) and
                         (Discounts.name eq discountName)

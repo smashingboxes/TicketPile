@@ -19,10 +19,13 @@ import javax.servlet.http.HttpServletRequest
 open class TPGraphQLController {
     @GetMapping(produces = arrayOf(MediaType.APPLICATION_JSON_VALUE))
     @ResponseBody
-    fun executeOperation(@RequestBody body : Map<String, Any>): Any {
+    fun executeOperation(
+            @RequestBody body : Map<String, Any>
+    ): Any {
         val auth = SecurityContextHolder.getContext().authentication as BearerToken
         val graphQL = createGraphQL(auth.user!!)
         val query = body["query"] as String
+        @Suppress("UNCHECKED_CAST")
         val variables = body["variables"] as Map<String, Any>?
         val executionResult = transaction {
             graphQL.execute(query, null as Any?, variables)
@@ -40,9 +43,11 @@ open class TPGraphQLController {
     }
 
     @PostMapping(consumes = arrayOf("application/json"))
+    @Suppress("UNCHECKED_CAST")
     fun postJson(@RequestBody body: Map<String, Any>,
-                 @RequestHeader(value = "graphql-schema", required = false) graphQLSchemaName: String?,
-                 httpServletRequest: HttpServletRequest): ResponseEntity<Map<String, Any>> {
+                 @Suppress("UNUSED_PARAMETER") @RequestHeader(value = "graphql-schema", required = false) graphQLSchemaName: String?,
+                 @Suppress("UNUSED_PARAMETER") httpServletRequest: HttpServletRequest
+    ): ResponseEntity<Map<String, Any>> {
         val auth = SecurityContextHolder.getContext().authentication as BearerToken
         if(auth.user == null) {
             throw AuthenticationException("User must be logged in to access GraphQL.")

@@ -42,6 +42,7 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
             .argument(GraphQLArgument("offset",
                     "Offset for the limit parameter", GraphQLInt, 0))
             .dataFetcher {
+                    @Suppress("UNCHECKED_CAST")
                     BookingSearch(
                         locations = (it.arguments["locations"] as List<Int>)
                                 .intersect(user.locations).toList(),

@@ -78,7 +78,7 @@ open class SecurityConfiguration : WebSecurityConfigurerAdapter() {
 }
 
 @Component
-class BearerTokenFilter() : OncePerRequestFilter() {
+open class BearerTokenFilter() : OncePerRequestFilter() {
     @Autowired
     lateinit var ssoConfig : AdvanceSSOConfig
     

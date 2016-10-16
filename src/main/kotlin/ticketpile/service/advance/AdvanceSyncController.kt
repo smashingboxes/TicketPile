@@ -1,6 +1,7 @@
 package ticketpile.service.advance
 
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.update
 import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.client.HttpClientErrorException
@@ -68,6 +69,7 @@ open class AdvanceSyncController {
         transaction {
             manager.importProducts()
             manager.importPersonCategories()
+            manager.importCustomer(advanceReservation.customer)
             manager.importRelatedDiscounts(advanceReservation)
             manager.importRelatedAddOns(advanceReservation)
             manager.importRelatedAvailabilities(advanceReservation)
@@ -154,6 +156,16 @@ open class AdvanceSyncController {
         }
         return task
     }
+
+    @PostMapping(value = "/synchronization/unstick")
+    fun unstickQueues() {
+        transaction(statement = {
+            AdvanceSyncTaskBookings.update({ AdvanceSyncTaskBookings.locked eq true })
+            {
+                it[locked] = false
+            }
+        }, repetitionAttempts = 10, isolationLevel = Connection.TRANSACTION_SERIALIZABLE)
+    }
     
     @GetMapping(
             value = "/validation/mismatches",
@@ -181,7 +193,8 @@ open class AdvanceSyncController {
                 errorList.add(
                         mapOf(
                                 "Source" to it.booking.externalSource!!,
-                                "Advance ID" to "${it.booking.externalId}",
+                                "Booking ID" to "${it.booking.externalId}",
+                                "Location ID" to it.booking.location.toString(),
                                 "Booking Code" to it.booking.code,
                                 "Error Message" to it.message
                         )
@@ -206,7 +219,8 @@ open class AdvanceSyncController {
                 errorList.add(
                         mapOf(
                                 "Source" to it.booking.externalSource!!,
-                                "Advance ID" to "${it.booking.externalId}",
+                                "Booking ID" to "${it.booking.externalId}",
+                                "Location ID" to it.booking.location.toString(),
                                 "Booking Code" to it.booking.code,
                                 "Warning Message" to it.message
                         )

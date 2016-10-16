@@ -1,9 +1,11 @@
 package ticketpile.service
 
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.CommandLineRunner
 import org.springframework.core.Ordered
 import org.springframework.stereotype.Component
 import ticketpile.service.advance.AdvanceManager
+import ticketpile.service.advance.AdvanceSyncController
 import ticketpile.service.advance.bookingQueueSync
 import ticketpile.service.advance.individualBookingSync
 import java.io.PrintWriter
@@ -31,7 +33,11 @@ fun wrapTask(task: () -> Unit, taskName: String) : () -> Unit {
 
 @Component
 open class BackgroundJobs() : CommandLineRunner, Ordered {
+    @Autowired
+    lateinit var syncController : AdvanceSyncController
     override fun run(vararg args : String) {
+        syncController.unstickQueues()
+        
         val scheduler = Executors.newScheduledThreadPool(13)
         scheduler.scheduleAtFixedRate(
                 wrapTask(bookingQueueSync, "Booking Queue Sync"),

@@ -130,6 +130,7 @@ val individualBookingSync = {
                 val advanceBooking = manager.bookingManager.getAdvanceBooking(taskBooking.reservationId)
                 
                 // The following imports will all handle their own transactions
+                manager.importCustomer(advanceBooking.customer)
                 manager.importRelatedAvailabilities(advanceBooking)
                 manager.importRelatedDiscounts(advanceBooking)
                 manager.importRelatedAddOns(advanceBooking)

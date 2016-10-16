@@ -241,30 +241,32 @@ open class AdvanceManager {
         }.first()
     }
 
-    internal fun importCustomer(advanceCustomer : AdvanceCustomer) : Customer {
-        val customer = Customer.find {
-            (Customers.externalSource eq source) and
-                    (Customers.externalId eq advanceCustomer.customerID)
-        }.firstOrNull() ?: Customer.new {
-            externalId = advanceCustomer.customerID
-            externalSource = source
-            firstName = advanceCustomer.firstName
-            lastName = advanceCustomer.lastName
-            address1 = advanceCustomer.address1
-            address2 = advanceCustomer.address2
-            state = advanceCustomer.state
-            country = advanceCustomer.country
-            emailAddress = advanceCustomer.emailAddress
-        }
-        customer.firstName = advanceCustomer.firstName
-        customer.lastName = advanceCustomer.lastName
-        customer.address1 = advanceCustomer.address1
-        customer.address2 = advanceCustomer.address2
-        customer.state = advanceCustomer.state
-        customer.country = advanceCustomer.country
-        customer.emailAddress = advanceCustomer.emailAddress
+    fun importCustomer(advanceCustomer : AdvanceCustomer) : Customer {
+        return transaction {
+            val customer = Customer.find {
+                (Customers.externalSource eq source) and
+                        (Customers.externalId eq advanceCustomer.customerID)
+            }.firstOrNull() ?: Customer.new {
+                externalId = advanceCustomer.customerID
+                externalSource = source
+                firstName = advanceCustomer.firstName
+                lastName = advanceCustomer.lastName
+                address1 = advanceCustomer.address1
+                address2 = advanceCustomer.address2
+                state = advanceCustomer.state
+                country = advanceCustomer.country
+                emailAddress = advanceCustomer.emailAddress
+            }
+            customer.firstName = advanceCustomer.firstName
+            customer.lastName = advanceCustomer.lastName
+            customer.address1 = advanceCustomer.address1
+            customer.address2 = advanceCustomer.address2
+            customer.state = advanceCustomer.state
+            customer.country = advanceCustomer.country
+            customer.emailAddress = advanceCustomer.emailAddress
 
-        return customer
+            customer
+        }
     }
     
     internal fun <T> api20Request(

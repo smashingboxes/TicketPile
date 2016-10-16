@@ -87,7 +87,7 @@ class BookingSearch (
     fun total(column : Column<BigDecimal?>) : BigDecimal {
         return Bookings.slice(column.sum())
                 .select(bookingOp)
-                .first()[column.sum()]!!
+                .first()[column.sum()] ?: BigZero
     }
     override val totalAmount: BigDecimal by lazy {
         total(Bookings.totalAmount)
