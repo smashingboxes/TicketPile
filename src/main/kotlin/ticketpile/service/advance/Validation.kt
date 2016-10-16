@@ -27,7 +27,10 @@ enum class SyncErrorType(val description : String, val level: SyncErrorLevel) {
     extraTicketCodes("Advance generated an extra ticket code", SyncErrorLevel.warning),
     mismatchTicketCodes("Advance had ticket codes for a person category not listing in pricing", SyncErrorLevel.warning),
     extraDiscountCodes("Advance listed the same discount on a booking twice", SyncErrorLevel.warning),
-    inApplicableAdjustment("A discount or add-on was listed that shouldn't apply to any tickets", SyncErrorLevel.warning);
+    inApplicableAdjustment("A discount or add-on was listed that shouldn't apply to any tickets", SyncErrorLevel.warning),
+    missingPersonCategory("A Person Category was listed in pricing information that is not listed in Merchant's Person Categories", SyncErrorLevel.warning),
+    unusableTicketCode("A Ticket Code couldn't be allocated to any pricing data and didn't survive the import to TicketPile", SyncErrorLevel.warning);
+
     companion object {
         val errors : List<SyncErrorType> by lazy {
             SyncErrorType.values().filter { it.level == SyncErrorLevel.error }
@@ -81,13 +84,12 @@ fun validateImportResult(booking : Booking, reservation : AdvanceReservation) {
     //Test booking total of confirmed bookings.  Bookings that should calculate as negative are expected
     //to calculate as zero from Advance. See booking 3418678/A-1BHNMT from The Ride.
     if(reservation.bookingStatus == "confirmed"
-        && booking.bookingTotal >= BigDecimal.ZERO
-        && (booking.bookingTotal - reservation.pricing.totalAmount).abs() > BigDecimal(0.00001)
+        && (booking.totalAmount!! + booking.taxAmount - reservation.pricing.totalAmount).abs() > BigDecimal(0.00001)
     )
         AdvanceSyncError.new {
             errorType = SyncErrorType.bookingTotal
             this.booking = booking
-            message = "TicketPile: $${booking.bookingTotal}; " +
+            message = "TicketPile: $${booking.totalAmount}; " +
                     "Advance: $${reservation.pricing.totalAmount}"
         }
 }

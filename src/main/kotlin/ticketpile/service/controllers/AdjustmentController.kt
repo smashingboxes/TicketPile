@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.dao.IntEntity
 import ticketpile.service.model.*
 import ticketpile.service.util.BadRequestException
+import ticketpile.service.util.BigZero
 import ticketpile.service.util.ResourceNotFoundException
 import ticketpile.service.util.transaction
 import java.math.BigDecimal
@@ -23,7 +24,7 @@ abstract class AdjustmentController<SubjectType: IntEntity> (
     ): AdjustmentType
             where AdjustmentType : DiscountAdjustment<SubjectType>,
             AdjustmentClass : EntityClass<Int, AdjustmentType> {
-        if(discountAmount > BigDecimal.ZERO) 
+        if(discountAmount > BigZero) 
             throw BadRequestException("Amount is too high!")
         var subjectAdjustment : AdjustmentType? = null
 

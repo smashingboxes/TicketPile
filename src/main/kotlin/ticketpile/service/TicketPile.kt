@@ -1,9 +1,5 @@
 package ticketpile.service
 
-import com.oembedler.moon.graphql.boot.EnableGraphQLServer
-import com.oembedler.moon.graphql.boot.GraphQLSchemaLocator
-import com.oembedler.moon.graphql.engine.GraphQLSchemaConfig
-import com.oembedler.moon.graphql.engine.GraphQLSchemaHolder
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
@@ -29,20 +25,11 @@ import springfox.documentation.spring.web.plugins.Docket
 import springfox.documentation.swagger.web.ApiKeyVehicle
 import springfox.documentation.swagger.web.SecurityConfiguration
 import springfox.documentation.swagger2.annotations.EnableSwagger2
-import ticketpile.service.advance.AdvanceManager
-import ticketpile.service.advance.bookingQueueSync
-import ticketpile.service.advance.individualBookingSync
 import ticketpile.service.advance.initializeSynchronization
 import ticketpile.service.database.initializeModel
-import ticketpile.service.graphql.TicketPileGraphQLSchema
 import ticketpile.service.security.initializeSecurity
 import ticketpile.service.springconfig.apiTokenHeader
 import ticketpile.service.util.transaction
-import java.io.PrintWriter
-import java.io.StringWriter
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
 
 /**
@@ -55,13 +42,14 @@ import javax.sql.DataSource
 @SpringBootApplication(exclude = arrayOf( SecurityAutoConfiguration::class ))
 @EnableSwagger2
 @EnableConfigurationProperties
-//@EnableGraphQLServer
 open class TicketPile {
     companion object {
         @JvmStatic fun main(args: Array<String>) {
             SpringApplication.run(TicketPile::class.java, *args)
         }
     }
+    @Autowired
+    lateinit var ssoConfig : AdvanceSSOConfig
     
     @Bean
     open fun tpApi() : Docket {
@@ -70,9 +58,58 @@ open class TicketPile {
                 .title("TicketPile API")
                 .description("TicketPile is an ETL and integration testing layer for Advance. " +
                         "It transforms JSON data from the Advance API into a normalized relational database. " +
-                        "<p>" + 
-                        "It logs inconsistencies it finds in data it retrieves from Advance. It will also provides errors " +
-                        "when totals from imported data fail to match those on the Advance reservation.")
+                        "<p/>" + 
+                        "TicketPile logs warnings of inconsistencies it finds in data it retrieves from Advance. " +
+                        "It also logs errors when totals from imported data fail to match those on the Advance " +
+                        "reservation." + 
+                        "<p/>" +
+                        "TicketPile's <a href=\"/graphiql.html\">GraphQL API</a> should be a useful tool for " +
+                        "Advance FE developers." + 
+                        "<p/>" + 
+                        "<h2>SSO Configuration</h2>" +
+                        "This TicketPile instance is pointed at <a href=\"${ssoConfig.host}\">" +
+                        "${ssoConfig.host}</a>." +
+                        "<p/>" + 
+                        "TicketPile's GraphQL API supports SSO with any Advance instance.  Just provide " +
+                        "it with a Bearer token that's valid on the Advance instance, and you can access " +
+                        "all the locations (and only the locations) that Advance says that user should have " +
+                        "access to. To change the SSO host, update <span style=\"font-family:monospace;\">" +
+                        "advance_sso.properties</span> and restart the server." +
+                        "<p/>" +
+                        "<h2>Administrator Operation</h2>" +
+                        "<ol style=\"list-style-type: decimal;\">" +
+                        "<li>Get your API token from the console where this server was started, " +
+                        "and paste it in the box to the upper-right corner of the screen." +
+                        "<ul>" +
+                        "<li>Because of Swagger limitations, the following links will unset " +
+                        "your admin token. So keep it handy :)</li>" +
+                        "<li>In the GraphQL API, admin tokens are allowed to access all " +
+                        "locations that have synchronization set up.</li>" + 
+                        "</ul>" +
+                        "</li>" +
+                        "<li><a href=\"/swagger-ui.html?#!/advance-sync-controller/addLocationUsingPOST\">" +
+                        "Set up synchronization with an Advance server</a>." +
+                        "<ul>" +
+                        "<li>TicketPile syncs data <i>per location</i>. So if we hit performance " +
+                        "limitations, it's easy to spin up more instances for new customers.</li>" +
+                        "<li>Some sample location configurations:" +
+                        "<table>" +
+                        "<tr><td><b>User</b></td><td><b>Password</b></td><td><b>LocationID</b></td></tr>" +
+                        "<tr><td>advance-dev@zozi.com</td><td>advance-dev@zozi.com</td><td>14948</td></tr>" +
+                        "<tr><td>info@experiencetheride.com</td><td>(varies)</td><td>34100</td></tr>" +
+                        "</table>" +
+                        "</li>" + 
+                        "</ul>" +
+                        "</li>" +
+                        "<li><a href=\"swagger-ui.html??#!/advance-sync-controller/getAllQueuesUsingGET\">" +
+                        "Check the status of your indexed locations.</a> Data is up-to-date when"  +
+                        "the queue size is 0.  These queues also provide handy Advance auth tokens " +
+                        "that you can use in the <a href=\"/graphiql.html\">GraphQL API</a>.</li>" +
+                        "<li>Check for <a href=\"swagger-ui.html???#!/advance-sync-controller/getErrorsUsingGET\">" +
+                        "errors</a> and <a href=\"swagger-ui.html????#!/advance-sync-controller/getWarningsUsingGET\">" +
+                        "warnings</a> in your imported data.</li>" +
+                        "</ol>"
+                )
                 .version("0.1")
                 .build())
         .securitySchemes(listOf(ApiKey("mykey", apiTokenHeader, "header")))
@@ -99,29 +136,6 @@ open class TicketPile {
             apiTokenHeader,
             null
         )
-    }
-
-    @Bean
-    //@ConditionalOnMissingBean
-    //@Throws(ClassNotFoundException::class)
-    open fun graphQLSchemaLocator(): GraphQLSchemaLocator {
-        val graphQLSchemaHolders = mutableMapOf<String, GraphQLSchemaHolder>()
-        graphQLSchemaHolders[TicketPileGraphQLSchema.queryType.name] = 
-            GraphQLSchemaHolder(
-                    TicketPileGraphQLSchema.queryType.name,
-                    TicketPileGraphQLSchema,
-                    GraphQLSchemaConfig(),
-                    ConcurrentHashMap()
-            )
-        //val graphQLSchemaBuilder = graphQLSchemaBuilder()
-        //val schemaClasses = initialSchemaClassesSet()
-        /*if (schemaClasses.size > 0) {
-            for (schema in schemaClasses) {
-                val schemaHolder = graphQLSchemaBuilder.buildSchema(schema)
-                graphQLSchemaHolders.put(schemaHolder.getSchemaName(), schemaHolder)
-            }
-        }*/
-        return GraphQLSchemaLocator(graphQLSchemaHolders)
     }
 }
 
@@ -170,36 +184,9 @@ open class DBConfig() {
     var password = ""
 }
 
-fun wrapTask(task: () -> Unit, taskName: String) : () -> Unit {
-    return {
-        try {
-            task()
-        } catch(t: Throwable) {
-            val sw = StringWriter()
-            t.printStackTrace(PrintWriter(sw))
-            println("$taskName error: $sw")
-        }
-    }
-}
-
 @Component
-open class BackgroundJobs() : CommandLineRunner, Ordered {
-    override fun run(vararg args : String) {
-        val scheduler = Executors.newScheduledThreadPool(13)
-        scheduler.scheduleAtFixedRate(
-                wrapTask(bookingQueueSync, "Booking Queue Sync"),
-                0, AdvanceManager.syncPeriodSeconds, TimeUnit.SECONDS
-        )
-        // Schedule multiple tasks for booking sync
-        for(offset in 1..3) {
-            scheduler.scheduleAtFixedRate(
-                    wrapTask(individualBookingSync, "Individual Booking Sync"),
-                    0, 10, TimeUnit.MILLISECONDS
-            )
-        }
-    }
-
-    override fun getOrder(): Int {
-        return 2
-    }
+@PropertySource("classpath:advance_sso.properties")
+@ConfigurationProperties(prefix = "advance.sso")
+open class AdvanceSSOConfig() {
+    lateinit var host : String
 }

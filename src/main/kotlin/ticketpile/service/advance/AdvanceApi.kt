@@ -2,6 +2,7 @@ package ticketpile.service.advance
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.joda.time.DateTime
+import ticketpile.service.util.BigZero
 import java.math.BigDecimal
 
 /**
@@ -21,11 +22,19 @@ class AdvanceAuthResponse() {
 }
 
 class AdvanceUserRespose() {
-    lateinit var user : AdvanceUser
+    var user : AdvanceUser? = null
 }
 
 class AdvanceUser() {
     lateinit var emailAddress : String
+    lateinit var merchants : List<AdvanceMerchant>
+}
+
+class AdvanceMerchant() {
+    lateinit var merchantID : String
+    val locationId :Int get() {
+        return merchantID.toInt()
+    }
 }
 
 class AdvanceModifiedBookingsResponse() {
@@ -44,12 +53,12 @@ class AdvanceReservation() {
     var bookingID  = -1    
     var bookingItems = emptyList<AdvanceBookingItem>()         
     var bookingStatus = ""
-    var channelCode = ""    
+    var channelCode : String? = null    
 	var currencyCode = ""    
 	var customer = AdvanceCustomer()    
 	var lineTotals = emptyList<AdvanceLineTotal>()    
 	var merchantID = -1
-	var officeNotes = ""    
+	var officeNotes : String? = null
 	var orderTakerID = -1    
 	var payments = emptyList<AdvancePayment>()    
 	var pricing = AdvancePricing()    
@@ -77,7 +86,7 @@ class AdvanceBookingItem() {
     var availabilityID = -1
     var bookingItemID = -1
     var noPersons = emptyList<Int>()
-    var productId = -1
+    var productID = -1
 	var addonSelections = emptyList<AdvanceAddOnSelection>()
     var ticketCodes = emptyList<AdvanceTicketCode>()
     var lineTotals = emptyList<AdvanceLineTotal>()
@@ -97,7 +106,7 @@ class AdvanceLineTotal() {
     var type = -1
     var label = ""
     var quantity = -1
-    var price = BigDecimal.ZERO
+    var price = BigZero
     var unitPrice : BigDecimal? = null
 }
 
@@ -117,13 +126,14 @@ class AdvancePayment() {
 }
 
 class AdvancePricing() {
-    var baseAmount = BigDecimal.ZERO
-    var totalAmount = BigDecimal.ZERO
+    var baseAmount = BigZero
+    var totalAmount = BigZero
+    var taxAmount : BigDecimal? = BigZero
     var priceAdjustments = emptyList<AdvancePriceAdjustment>()
 }
 
 class AdvancePriceAdjustment(
-        var amount : BigDecimal = BigDecimal.ZERO,
+        var amount : BigDecimal = BigZero,
         var label : String = "",
         var promotionID : Int? = null,
         var type : Int = 0
@@ -164,20 +174,20 @@ class AdvanceProductsReponse() {
 class AdvanceProduct() {
     var productID = -1
     var name = ""
-    var shortDescription = ""
+    var shortDescription :String ?= null
 }
 
 class AdvancePromotionResponse() {
     var promotion = AdvancePromotion()
 }
 
-class AdvancePromotion() {
-    var promotionCode = ""
-    var description : String? = ""
-    var calcbasis = "perperson"
-    var associations = emptyList<AdvancePromotionAssociation>()
-    var personCategories = emptyList<AdvancePromotionPersonCategory>()
-}
+class AdvancePromotion(
+        var promotionCode : String = "",
+        var description : String? = "",
+        var calcbasis : String = "perperson",
+        var associations : List<AdvancePromotionAssociation> = emptyList<AdvancePromotionAssociation>(),
+        var personCategories : List<AdvancePromotionPersonCategory> = emptyList<AdvancePromotionPersonCategory>()
+)
 
 class AdvanceAddOnResponse() {
     var addon = AdvanceAddOn()

@@ -2,7 +2,6 @@ package ticketpile.service.database
 
 import ticketpile.service.util.ReferenceTable
 import ticketpile.service.util.RelationalTable
-import ticketpile.service.util.decimalScale
 
 /**
  * The base ways we can affect the price of Tickets, Events
@@ -11,7 +10,7 @@ import ticketpile.service.util.decimalScale
  */
 
 open class AdjustmentTable(singularName: String, subject : RelationalTable) : ReferenceTable(singularName, subject) {
-    val amount = decimal("amount", precision = 65, scale = decimalScale)
+    val amount = decimal("amount")
 }
 
 open class DiscountTable(singularName: String, subject : RelationalTable) : AdjustmentTable(singularName, subject) {

@@ -6,8 +6,12 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.DiscountPersonCategories
 import ticketpile.service.database.DiscountProducts
 import ticketpile.service.database.Discounts
+import ticketpile.service.model.basis.weighByApplicableGrossRevenue
+import ticketpile.service.model.basis.weighByApplicableTicketCount
+import ticketpile.service.model.transformation.Weighable
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
+import ticketpile.service.util.RelationalEntityClass
 import java.math.BigDecimal
 
 /**
@@ -29,8 +33,8 @@ class Discount(id: EntityID<Int>) : PrimaryEntity(id, Discounts) {
     @get:JsonProperty
     var basis: DiscountBasis by Discounts.basis
 
-    private val _products by DiscountProduct referrersOn DiscountProducts.parent
-    private val _personCategories by DiscountPersonCategory referrersOn DiscountPersonCategories.parent
+    private val _products by DiscountProduct childrenOn DiscountProducts.parent
+    private val _personCategories by DiscountPersonCategory childrenOn DiscountPersonCategories.parent
     val products: Iterable<Product> get() {
         val result = mutableListOf<Product>()
         _products.forEach { result.add(it.product) }
@@ -55,7 +59,7 @@ enum class DiscountBasis(val weightMethod : (BigDecimal, Weighable, Ticket, (Tic
  * Fundamental component of discount applicability along with [DiscountProduct].
  */
 class DiscountPersonCategory(id: EntityID<Int>) : RelationalEntity(id) {
-    companion object : IntEntityClass<DiscountPersonCategory>(DiscountPersonCategories)
+    companion object : RelationalEntityClass<DiscountPersonCategory>(DiscountPersonCategories)
     var discount by Discount referencedOn DiscountPersonCategories.parent
     var personCategory by PersonCategory referencedOn DiscountPersonCategories.personCategory
 }
@@ -64,7 +68,7 @@ class DiscountPersonCategory(id: EntityID<Int>) : RelationalEntity(id) {
  * Fundamental component of discount applicability along with [DiscountPersonCategory].
  */
 class DiscountProduct(id: EntityID<Int>) : RelationalEntity(id) {
-    companion object : IntEntityClass<DiscountProduct>(DiscountProducts)
+    companion object : RelationalEntityClass<DiscountProduct>(DiscountProducts)
     var discount by Discount referencedOn DiscountProducts.parent
     var product by Product referencedOn DiscountProducts.product
 }

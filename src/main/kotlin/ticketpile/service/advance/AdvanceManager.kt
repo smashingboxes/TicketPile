@@ -8,12 +8,8 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.web.client.RestTemplate
-import ticketpile.service.database.Customers
-import ticketpile.service.database.PersonCategories
-import ticketpile.service.database.Products
-import ticketpile.service.model.Customer
-import ticketpile.service.model.PersonCategory
-import ticketpile.service.model.Product
+import ticketpile.service.database.*
+import ticketpile.service.model.*
 import ticketpile.service.util.flushEntityCache
 import ticketpile.service.util.transaction
 import java.net.URI
@@ -26,7 +22,7 @@ import java.sql.Connection
  * 
  * Created by jonlatane on 10/10/16.
  */
-abstract class AdvanceManager {
+open class AdvanceManager {
     companion object {
         internal val restTemplate = RestTemplate()
         internal val dateTimeFormatter = DateTimeFormat.forPattern(
@@ -94,6 +90,42 @@ abstract class AdvanceManager {
         }, isolationLevel = Connection.TRANSACTION_SERIALIZABLE, logging = false)
     }
 
+    /**
+     * Advance Booking Items are hard to get an availability from.  This encapsulates
+     * that.  Assumes [AdvanceLocationManager.importRelatedAvailabilities] has been
+     * called for Booking Items with valid availabilities.
+     */
+    internal fun findAvailabilityFor(bookingItem : AdvanceBookingItem) : Event {
+        if(bookingItem.availabilityID != 0) {
+            return Event.find {
+                (Events.externalSource eq source) and
+                        (Events.externalId eq bookingItem.availabilityID)
+            }.first()
+        } else {
+            val product = getProduct(bookingItem.productID)
+            var event = Event.find {
+                (Events.externalSource eq source) and
+                        (Events.externalId eq null as Int?) and
+                        (Events.startTime eq bookingItem.startDateTime) and
+                        (Events.endTime eq bookingItem.endDateTime) and
+                        (Events.product eq product.id) and
+                        (Events.locationId eq locationId)
+            }.firstOrNull()
+            if(event == null) {
+                event = Event.new {
+                    externalId = null
+                    externalSource = source
+                    startTime = bookingItem.startDateTime
+                    endTime = bookingItem.endDateTime
+                    capacity = -1
+                    this.product = product
+                    locationId = this@AdvanceManager.locationId
+                }
+            }
+            return event
+        }
+    }
+
     fun importPersonCategories() {
         val personCategoryResponse = api20Request(
                 "/personcategories?merchantID=$locationId",
@@ -117,7 +149,7 @@ abstract class AdvanceManager {
     
     fun importProducts() {
         val productsResponse = api20Request(
-                "/merchants/$locationId/products?merchantID=$locationId",
+                "/merchants/$locationId/products?includeDeleted=true&merchantID=$locationId",
                 AdvanceProductsReponse::class.java)
         productsResponse.products.forEach {
             aProduct: AdvanceProduct ->
@@ -135,24 +167,32 @@ abstract class AdvanceManager {
             externalId = aProduct.productID
             externalSource = source
             name = aProduct.name
-            description = aProduct.shortDescription
+            description = aProduct.shortDescription ?: ""
         }
         product.name = aProduct.name
-        product.description = aProduct.shortDescription
+        product.description = aProduct.shortDescription ?: ""
     }
 
     internal fun getProduct(productId : Int) : Product {
-        val result = Product.find {
+        var result = Product.find {
             (Products.externalSource eq source) and
                     (Products.externalId eq productId)
         }.firstOrNull()
-        if(result == null) {
+        if(result == null) { // First check for new products.
             importProducts()
             flushEntityCache()
-            return Product.find {
+            result = Product.find {
                 (Products.externalSource eq source) and
                         (Products.externalId eq productId)
-            }.first()
+            }.firstOrNull() 
+        }
+        if(result == null) { // Advance's lack of FKs means a product has been lost completely.
+            result = Product.new { 
+                externalSource = source
+                externalId = productId
+                name = "Unreferenced Product"
+                description = "A Product that is missing from Advance entirely."
+            }
         }
         return result
     }
@@ -182,6 +222,23 @@ abstract class AdvanceManager {
      */
     internal fun getExternalPersonCategoryId(personCategoryIndex : Int) : Int {
         return (10 * locationId) + personCategoryIndex
+    }
+    
+    internal fun getDiscountName(label : String) : String {
+        return label.removePrefix("Discount:").trim()
+    }
+    
+    internal fun getDiscount(advanceDiscount : AdvancePriceAdjustment) : Discount {
+        if(advanceDiscount.promotionID != null) {
+            return Discount.find {
+                (Discounts.externalSource eq source) and
+                        (Discounts.externalId eq advanceDiscount.promotionID)
+            }.first()
+        }
+        return Discount.find {
+            (Discounts.externalSource eq source) and
+                    (Discounts.name eq getDiscountName(advanceDiscount.label))
+        }.first()
     }
 
     internal fun importCustomer(advanceCustomer : AdvanceCustomer) : Customer {
@@ -224,9 +281,9 @@ abstract class AdvanceManager {
         return responseEntity.body
     }
 
-    val currentUser : AdvanceUser get() {
+    val currentUser : AdvanceUser? get() {
         return api20Request(
-                "/authorization/current-user",
+                "/authorize/current-user",
                 AdvanceUserRespose::class.java
         ).user
     }

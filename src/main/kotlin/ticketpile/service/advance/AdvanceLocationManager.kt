@@ -2,6 +2,7 @@ package ticketpile.service.advance
 
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
+import org.springframework.web.client.HttpClientErrorException
 import ticketpile.service.database.*
 import ticketpile.service.model.*
 import ticketpile.service.util.transaction
@@ -19,9 +20,11 @@ open class AdvanceLocationManager(host: String, authorizationKey: String, locati
     
     fun importRelatedAvailabilities(reservation : AdvanceReservation) {
         reservation.bookingItems.forEach {
-            bookingItem ->
             transaction {
-                importAvailability(bookingItem.availabilityID)
+                if(it.availabilityID != 0)
+                    importAvailability(it.availabilityID)
+                else
+                    findAvailabilityFor(it)
             }
         }
     }
@@ -56,17 +59,44 @@ open class AdvanceLocationManager(host: String, authorizationKey: String, locati
     fun importRelatedDiscounts(reservation : AdvanceReservation) {
         reservation.pricing.priceAdjustments.filter{it.type == 1500}
                 .forEach{
-                    aDiscount ->
-                    importDiscount(aDiscount.promotionID!!)
+                    if(it.promotionID != null) {
+                        importDiscount(it.promotionID!!)
+                    } else {
+                        importDiscount(it.label)
+                    }
                 }
+    }
+    private fun importDiscount(label : String) {
+        val discountName = getDiscountName(label)
+        transaction {
+            val discount = Discount.find {
+                (Discounts.externalSource eq source) and
+                        (Discounts.externalId eq null as Int?) and
+                        (Discounts.name eq discountName)
+            }.firstOrNull() ?: Discount.new {
+                externalSource = source
+                externalId = null
+                name = discountName
+                description = ""
+                basis = DiscountBasis.PERBOOKING
+            }
+        }
     }
     private fun importDiscount(
             promotionId: Int
     ) {
-        val advancePromotion = api20Request(
-                "/promotions/$promotionId?promotionID=$promotionId",
-                AdvancePromotionResponse::class.java
-        ).promotion
+        val advancePromotion = try {
+            api20Request(
+                    "/promotions/$promotionId?promotionID=$promotionId",
+                    AdvancePromotionResponse::class.java
+            ).promotion
+        } catch(t: HttpClientErrorException) {
+            // Advance's lack of FKs strike again!
+            AdvancePromotion(
+                    calcbasis = "perbooking",
+                    promotionCode = "Missing Advance Discount"
+            )
+        }
         val calcbasis = DiscountBasis.valueOf(advancePromotion.calcbasis.toUpperCase())
         transaction {
             val discount = Discount.find {
