@@ -48,6 +48,8 @@ open class TicketPile {
             SpringApplication.run(TicketPile::class.java, *args)
         }
     }
+    @Autowired
+    lateinit var ssoConfig : AdvanceSSOConfig
     
     @Bean
     open fun tpApi() : Docket {
@@ -61,8 +63,52 @@ open class TicketPile {
                         "It also logs errors when totals from imported data fail to match those on the Advance " +
                         "reservation." + 
                         "<p/>" +
-                        "TicketPile's <a href=\"/graphiql.html\">GraphQL API</a> supports SSO with Advance and " +
-                        "allows for highly efficient querying of Advance data."
+                        "TicketPile's <a href=\"/graphiql.html\">GraphQL API</a> should be a useful tool for " +
+                        "Advance FE developers." + 
+                        "<p/>" + 
+                        "<h2>SSO Configuration</h2>" +
+                        "This TicketPile instance is pointed at <a href=\"${ssoConfig.host}\">" +
+                        "${ssoConfig.host}</a>." +
+                        "<p/>" + 
+                        "TicketPile's GraphQL API supports SSO with any Advance instance.  Just provide " +
+                        "it with a Bearer token that's valid on the Advance instance, and you can access " +
+                        "all the locations (and only the locations) that Advance says that user should have " +
+                        "access to. To change the SSO host, update <span style=\"font-family:monospace;\">" +
+                        "advance_sso.properties</span> and restart the server." +
+                        "<p/>" +
+                        "<h2>Administrator Operation</h2>" +
+                        "<ol style=\"list-style-type: decimal;\">" +
+                        "<li>Get your API token from the console where this server was started, " +
+                        "and paste it in the box to the upper-right corner of the screen." +
+                        "<ul>" +
+                        "<li>Because of Swagger limitations, the following links will unset " +
+                        "your admin token. So keep it handy :)</li>" +
+                        "<li>In the GraphQL API, admin tokens are allowed to access all " +
+                        "locations that have synchronization set up.</li>" + 
+                        "</ul>" +
+                        "</li>" +
+                        "<li><a href=\"/swagger-ui.html?#!/advance-sync-controller/addLocationUsingPOST\">" +
+                        "Set up synchronization with an Advance server</a>." +
+                        "<ul>" +
+                        "<li>TicketPile syncs data <i>per location</i>. So if we hit performance " +
+                        "limitations, it's easy to spin up more instances for new customers.</li>" +
+                        "<li>Some sample location configurations:" +
+                        "<table>" +
+                        "<tr><td><b>User</b></td><td><b>Password</b></td><td><b>LocationID</b></td></tr>" +
+                        "<tr><td>advance-dev@zozi.com</td><td>advance-dev@zozi.com</td><td>14948</td></tr>" +
+                        "<tr><td>info@experiencetheride.com</td><td>(varies)</td><td>34100</td></tr>" +
+                        "</table>" +
+                        "</li>" + 
+                        "</ul>" +
+                        "</li>" +
+                        "<li><a href=\"swagger-ui.html??#!/advance-sync-controller/getAllQueuesUsingGET\">" +
+                        "Check the status of your indexed locations.</a> Data is up-to-date when"  +
+                        "the queue size is 0.  These queues also provide handy Advance auth tokens " +
+                        "that you can use in the <a href=\"/graphiql.html\">GraphQL API</a>.</li>" +
+                        "<li>Check for <a href=\"swagger-ui.html???#!/advance-sync-controller/getErrorsUsingGET\">" +
+                        "errors</a> and <a href=\"swagger-ui.html????#!/advance-sync-controller/getWarningsUsingGET\">" +
+                        "warnings</a> in your imported data.</li>" +
+                        "</ol>"
                 )
                 .version("0.1")
                 .build())

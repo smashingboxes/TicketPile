@@ -53,12 +53,12 @@ class AdvanceReservation() {
     var bookingID  = -1    
     var bookingItems = emptyList<AdvanceBookingItem>()         
     var bookingStatus = ""
-    var channelCode = ""    
+    var channelCode : String? = null    
 	var currencyCode = ""    
 	var customer = AdvanceCustomer()    
 	var lineTotals = emptyList<AdvanceLineTotal>()    
 	var merchantID = -1
-	var officeNotes = ""    
+	var officeNotes : String? = null
 	var orderTakerID = -1    
 	var payments = emptyList<AdvancePayment>()    
 	var pricing = AdvancePricing()    
@@ -86,7 +86,7 @@ class AdvanceBookingItem() {
     var availabilityID = -1
     var bookingItemID = -1
     var noPersons = emptyList<Int>()
-    var productId = -1
+    var productID = -1
 	var addonSelections = emptyList<AdvanceAddOnSelection>()
     var ticketCodes = emptyList<AdvanceTicketCode>()
     var lineTotals = emptyList<AdvanceLineTotal>()
@@ -128,6 +128,7 @@ class AdvancePayment() {
 class AdvancePricing() {
     var baseAmount = BigZero
     var totalAmount = BigZero
+    var taxAmount : BigDecimal? = BigZero
     var priceAdjustments = emptyList<AdvancePriceAdjustment>()
 }
 
@@ -173,20 +174,20 @@ class AdvanceProductsReponse() {
 class AdvanceProduct() {
     var productID = -1
     var name = ""
-    var shortDescription = ""
+    var shortDescription :String ?= null
 }
 
 class AdvancePromotionResponse() {
     var promotion = AdvancePromotion()
 }
 
-class AdvancePromotion() {
-    var promotionCode = ""
-    var description : String? = ""
-    var calcbasis = "perperson"
-    var associations = emptyList<AdvancePromotionAssociation>()
-    var personCategories = emptyList<AdvancePromotionPersonCategory>()
-}
+class AdvancePromotion(
+        var promotionCode : String = "",
+        var description : String? = "",
+        var calcbasis : String = "perperson",
+        var associations : List<AdvancePromotionAssociation> = emptyList<AdvancePromotionAssociation>(),
+        var personCategories : List<AdvancePromotionPersonCategory> = emptyList<AdvancePromotionPersonCategory>()
+)
 
 class AdvanceAddOnResponse() {
     var addon = AdvanceAddOn()

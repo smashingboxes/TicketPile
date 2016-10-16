@@ -4,23 +4,15 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import ticketpile.service.database.AddOns
+import ticketpile.service.model.basis.pricePerItem
+import ticketpile.service.model.basis.pricePerPerson
+import ticketpile.service.model.transformation.Weighable
+import ticketpile.service.model.basis.weighByApplicableGrossRevenue
+import ticketpile.service.model.basis.weighByApplicableTicketCount
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
 
-/**
- * Created by jonlatane on 10/7/16.
- */
-val pricePerItem = {
-    amount: BigDecimal, weighable: Weighable ->
-    amount
-}
-val pricePerPerson = {
-    amount: BigDecimal, weighable: Weighable ->
-    val result = (amount.setScale(decimalScale)) *
-            (BigDecimal(weighable.tickets.count()))
-    result
-}
 enum class AddOnBasis(
         val weightMethod : (BigDecimal, Weighable, Ticket, (Ticket) -> Boolean) -> BigDecimal,
         val priceMethod : (BigDecimal, Weighable) -> BigDecimal

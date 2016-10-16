@@ -5,6 +5,8 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.database.*
+import ticketpile.service.model.transformation.Weighable
+import ticketpile.service.util.BigZero
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
 import ticketpile.service.util.RelationalEntityClass
@@ -27,7 +29,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
     @get:JsonProperty
     var personCategory by PersonCategory referencedOn Tickets.personCategory
     @get:JsonProperty
-    var basePrice by Tickets.basePrice
+    override var basePrice by Tickets.basePrice
     
     val addOns by TicketBookingAddOn childrenOn TicketBookingAddOns.parent
     val manualAdjustments by TicketBookingManualAdjustment childrenOn TicketBookingManualAdjustments.parent
@@ -36,7 +38,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
     val itemAddOns by TicketBookingItemAddOn childrenOn TicketBookingItemAddOns.parent
 
     @get:JsonProperty
-    var discountsAmount by cacheNotifierColumn(
+    override var discountsAmount by cacheNotifierColumn(
             column = Tickets.discountsAmount,
             calculation = { adjustmentTotal(discounts) },
             notifier = {
@@ -44,7 +46,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
                 this.bookingItem.discountsAmount = null
             })
     @get:JsonProperty
-    var feesAmount by cacheNotifierColumn(
+    override var feesAmount by cacheNotifierColumn(
             column = Tickets.feesAmount,
             calculation = { adjustmentTotal(fees) },
             notifier = {
@@ -52,7 +54,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
                 this.bookingItem.feesAmount = null
             })
     @get:JsonProperty
-    var addOnsAmount by cacheNotifierColumn(
+    override var addOnsAmount by cacheNotifierColumn(
             column = Tickets.addOnsAmount,
             calculation = { adjustmentTotal(addOns) },
             notifier = {
@@ -60,7 +62,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
                 this.bookingItem.addOnsAmount = null
             })
     @get:JsonProperty
-    var manualAdjustmentsAmount by cacheNotifierColumn(
+    override var manualAdjustmentsAmount by cacheNotifierColumn(
             column = Tickets.manualAdjustmentsAmount,
             calculation = { adjustmentTotal(manualAdjustments) },
             notifier = {
@@ -68,7 +70,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
                 this.bookingItem.manualAdjustmentsAmount = null
             })
     @get:JsonProperty
-    var itemAddOnsAmount by cacheNotifierColumn(
+    override var itemAddOnsAmount by cacheNotifierColumn(
             column = Tickets.itemAddOnsAmount,
             calculation = { adjustmentTotal(itemAddOns) },
             notifier = {
@@ -84,6 +86,16 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
             },
             notifier = {
                 this.bookingItem.grossAmount = null
+                this.totalAmount = null
+            })
+    @get:JsonProperty
+    override var totalAmount: BigDecimal? by cacheNotifierColumn(
+            column = Tickets.totalAmount,
+            calculation = {
+                BigZero.max(grossAmount!!)
+            },
+            notifier = {
+                this.bookingItem.totalAmount = null
             })
     @get:JsonProperty
     val discountedPrice : BigDecimal get() {
@@ -132,7 +144,7 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
         }
 
     fun populateCaches() {
-        grossAmount!!
+        totalAmount!!
         
         discountCount!!
         feeCount!!

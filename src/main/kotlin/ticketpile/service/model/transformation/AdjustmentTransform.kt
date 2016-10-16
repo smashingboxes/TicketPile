@@ -1,4 +1,4 @@
-package ticketpile.service.model
+package ticketpile.service.model.transformation
 
 import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.advance.AdvanceSyncError
@@ -6,9 +6,10 @@ import ticketpile.service.advance.SyncErrorType
 import ticketpile.service.database.TicketBookingAddOns
 import ticketpile.service.database.TicketBookingDiscounts
 import ticketpile.service.database.TicketBookingManualAdjustments
-import ticketpile.service.util.BigZero
+import ticketpile.service.model.*
+import ticketpile.service.model.basis.weighByApplicableGrossRevenue
+import ticketpile.service.model.basis.weighByApplicableTicketCount
 import ticketpile.service.util.RelationalEntity
-import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
 
 /**
@@ -24,55 +25,6 @@ internal val transforms = arrayOf(
         BookingItemAddOnTransformation,
         BookingFeeTransformation
 )
-interface Weighable {
-    val tickets : List<Ticket>
-    val grossAmount : BigDecimal?
-}
-
-/**
- * Returns true if the {@param ticket} is applicable or if no tickets in the {@param weighable} are applicable.
- */
-private fun isReallyApplicable(ticket: Ticket, weighable: Weighable, applicable: (Ticket) -> Boolean) : Boolean {
-    return applicable(ticket) || weighable.tickets.filter(applicable).isEmpty()
-}
-/**
- * Returns a list of all applicable tickets in the weighable, or a list of all tickets in the weighable if no
- * tickets are applicable.
- */
-private fun applicableTickets(weighable: Weighable, applicable: (Ticket) -> Boolean) : List<Ticket> {
-    var result= weighable.tickets.filter(applicable)
-    if(result.isEmpty()) {
-        result = weighable.tickets
-    }
-    return result
-}
-val weighByApplicableTicketCount = {
-    amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
-    val applicableTickets = applicableTickets(weighable, applicable)
-    if(isReallyApplicable(ticket, weighable, applicable))
-        amount.setScale(decimalScale) / BigDecimal(applicableTickets.count()).setScale(decimalScale)
-    else
-        BigZero
-}
-val weighByApplicableGrossRevenue = {
-    amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
-    val applicableTickets = applicableTickets(weighable, applicable)
-    if(isReallyApplicable(ticket, weighable, applicable)) {
-        val applicableGross = applicableTickets.map { it.grossAmount }.fold(
-                initial = BigZero,
-                operation = {
-                    amount1, amount2 ->
-                    amount1!! + amount2!!
-                })
-        if(applicableGross == BigZero)
-            weighByApplicableTicketCount(amount, weighable, ticket, applicable)
-        else 
-            amount.setScale(decimalScale) *
-                    ticket.grossAmount!!.setScale(decimalScale) /
-                    applicableGross.setScale(decimalScale)
-    } else
-        BigZero
-}
 
 /**
  * Base class for transforming [Booking] and [BookingItem] level adjustments to
@@ -174,7 +126,7 @@ internal object BookingAddOnTransformation : TicketAdjustmentTransform<BookingAd
             TicketBookingAddOns.parent eq ticket.id
         }
     }
-    override fun weigh(source: BookingAddOn, ticket: Ticket) : BigDecimal{
+    override fun weigh(source: BookingAddOn, ticket: Ticket) : BigDecimal {
         return source.addOn.basis.weightMethod(
                 source.amount,
                 source.subject,
@@ -204,7 +156,7 @@ internal object BookingManualAdjustmentTransformation : TicketAdjustmentTransfor
         }
     }
 
-    override fun weigh(source: BookingManualAdjustment, ticket: Ticket) : BigDecimal{
+    override fun weigh(source: BookingManualAdjustment, ticket: Ticket) : BigDecimal {
         return weighByApplicableGrossRevenue(source.amount, source.booking, ticket, applicability(source))
     }
     
@@ -221,7 +173,6 @@ internal object BookingManualAdjustmentTransformation : TicketAdjustmentTransfor
     }
 }
 
-
 internal object BookingFeeTransformation : TicketAdjustmentTransform<BookingFee>() {
     override fun prepare(ticket : Ticket) {
         TicketBookingManualAdjustments.deleteWhere {
@@ -229,7 +180,7 @@ internal object BookingFeeTransformation : TicketAdjustmentTransform<BookingFee>
         }
     }
 
-    override fun weigh(source: BookingFee, ticket: Ticket) : BigDecimal{
+    override fun weigh(source: BookingFee, ticket: Ticket) : BigDecimal {
         return weighByApplicableTicketCount(source.amount, source.booking, ticket, applicability(source))
     }
 
@@ -253,7 +204,7 @@ internal object BookingItemAddOnTransformation : TicketAdjustmentTransform<Booki
         }
     }
 
-    override fun weigh(source: BookingItemAddOn, ticket: Ticket) : BigDecimal{
+    override fun weigh(source: BookingItemAddOn, ticket: Ticket) : BigDecimal {
         return source.addOn.basis.weightMethod(
                 source.amount,
                 source.subject,
@@ -294,14 +245,13 @@ internal object BookingItemAddOnTransformation : TicketAdjustmentTransform<Booki
     }
 }
 
-
 internal object BookingDiscountTransformation : TicketAdjustmentTransform<BookingDiscount>() {
     override fun prepare(ticket : Ticket) {
         TicketBookingDiscounts.deleteWhere {
             TicketBookingDiscounts.parent eq ticket.id
         }
     }
-    override fun weigh(source: BookingDiscount, ticket: Ticket) : BigDecimal{
+    override fun weigh(source: BookingDiscount, ticket: Ticket) : BigDecimal {
         return source.discount.basis.weightMethod(
                 source.amount, 
                 source.subject, 

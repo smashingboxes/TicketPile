@@ -1,15 +1,15 @@
 package ticketpile.service.model
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import ticketpile.service.model.transformation.Weighable
 import ticketpile.service.util.BigZero
-import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
 
 
 /**
  * All the adjustments that can be accrued on stuff.
  * 
- * Right now Advance only supports:
+ * Right now Advance supports:
  * 
  * - [DiscountAdjustment] on [Booking]: [BookingDiscount]
  * - [AddOnAdjustment] on [Booking]: [BookingAddOn]
@@ -17,11 +17,21 @@ import java.math.BigDecimal
  * - [FeeAdjustment] on [Booking]: [BookingFee]
  * - [AddOnAdjustment] on [BookingItem]: [BookingItemAddOn]
  * 
- * A [MappedAdjustment] should always implement one of the above interfaces and
+ * TicketPile maps data to [Ticket]s.  The mappings of the above are as follows, respectively:
+ *
+ * - [DiscountAdjustment] on [Booking]: [TicketBookingDiscount]
+ * - [AddOnAdjustment] on [Booking]: [TicketBookingAddOn]
+ * - [ManualAdjustment] on [Booking]: [TicketBookingManualAdjustment]
+ * - [FeeAdjustment] on [Booking]: [TicketBookingFee]
+ * - [AddOnAdjustment] on [BookingItem]: [TicketBookingItemAddOn]
  * 
  * Created by jonlatane on 8/28/16.
  */
-fun adjustmentTotal(adjustments : List<Adjustment<*>>) : BigDecimal {
+
+/**
+ * Calculate the total value of several adjustments.
+ */
+fun adjustmentTotal(adjustments : Iterable<Adjustment<*>>) : BigDecimal {
     return adjustments.map{it.amount}.fold(
             initial = BigZero,
             operation = {

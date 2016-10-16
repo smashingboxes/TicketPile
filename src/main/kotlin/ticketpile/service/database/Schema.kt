@@ -2,6 +2,7 @@ package ticketpile.service.database
 
 import ticketpile.service.model.AddOnBasis
 import ticketpile.service.model.DiscountBasis
+import ticketpile.service.util.BigZero
 import ticketpile.service.util.ReferenceTable
 import ticketpile.service.util.RelationalTable
 
@@ -18,6 +19,7 @@ object Bookings : RelationalTable("booking") {
     val customer = reference(Customers).index()
     val matchesExternal = bool("matchesExternal").default(false).index()
     val locationId = integer("location")
+    val taxAmount = decimal("taxAmount").default(BigZero)
     
     //Caching columns
     val basePrice = decimal("basePrice").nullable()
@@ -26,12 +28,11 @@ object Bookings : RelationalTable("booking") {
     val addOnsAmount = decimal("addOnsAmount").nullable()
     val manualAdjustmentsAmount = decimal("manualAdjustmentsAmount").nullable()
     val itemAddOnsAmount = decimal("itemAddOnsAmount").nullable()
-    val grossAmount = decimal("grossAmount").nullable()
-    
-    val bookingTotal = decimal("bookingTotal").nullable()
+    val grossAmount = decimal("grossAmount").nullable() //Sum of the above
+    val totalAmount = decimal("totalAmount").nullable() //
 
     /**
-     * @see [ticketpile.service.graphql.BookingQuery.bookingOp]
+     * @see [ticketpile.service.graphql.BookingSearch.bookingOp]
      */
     val idxGraphQL = index(false, locationId, externalId, status, code)
 }
@@ -56,6 +57,8 @@ object BookingItems : RelationalTable("bookingItem") {
     val manualAdjustmentsAmount = decimal("manualAdjustmentsAmount").nullable()
     val itemAddOnsAmount = decimal("itemAddOnsAmount").nullable()
     val grossAmount = decimal("grossAmount").nullable()
+    
+    val totalAmount = decimal("totalAmount").nullable()
 }
 
 object Tickets : ReferenceTable("ticket", BookingItems) {
@@ -63,14 +66,16 @@ object Tickets : ReferenceTable("ticket", BookingItems) {
     val basePrice = decimal("baseprice")
     val code = varchar("code", length = 128)
     
-    //Caching columns
+    // Caching columns
     val discountsAmount = decimal("discountsAmount").nullable()
     val feesAmount = decimal("feesAmount").nullable()
     val addOnsAmount = decimal("addOnsAmount").nullable()
     val manualAdjustmentsAmount = decimal("manualAdjustmentsAmount").nullable()
     val itemAddOnsAmount = decimal("itemAddOnsAmount").nullable()
     val grossAmount = decimal("grossAmount").nullable()
+    val totalAmount = decimal("totalAmount").nullable()
     
+    // More caching columns useful for analysis
     val discountCount = integer("discountCount").nullable()
     val feeCount = integer("feeCount").nullable()
     val addOnCount = integer("addOnCount").nullable()

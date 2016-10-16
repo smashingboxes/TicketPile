@@ -50,14 +50,14 @@ open class TPGraphQLController {
         val graphQL = createGraphQL(auth.user)
 
         val query = body["query"] as String
-        //val operationName = body["operationName"] as String?
+        val operationName = body["operationName"] as String?
         var variables = emptyMap<String, Any>()
         try {
            variables = body["variables"] as Map<String, Any>
         } catch(t:Throwable) {}
 
         val executionResult = transaction {
-            graphQL.execute(query, null as Any?, variables)
+            graphQL.execute(query, operationName, null as Any?, variables)
         }
         val result : Map<String, Any>
         if (executionResult.errors?.count() ?: 0 > 0) {

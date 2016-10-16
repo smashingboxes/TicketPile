@@ -8,6 +8,7 @@ import ticketpile.service.advance.AdvanceSyncError
 import ticketpile.service.advance.AdvanceSyncErrors
 import ticketpile.service.advance.SyncErrorLevel
 import ticketpile.service.database.*
+import ticketpile.service.model.transformation.Weighable
 import ticketpile.service.util.BigZero
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
@@ -76,7 +77,7 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
     var matchesExternal by Bookings.matchesExternal
     
     @get:JsonProperty
-    var basePrice by cacheNotifierColumn(
+    override var basePrice by cacheNotifierColumn(
             column = Bookings.basePrice,
             calculation = { itemTotal({it.basePrice!!}) },
             notifier = {
@@ -84,35 +85,35 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
             })
     
     @get:JsonProperty
-    var discountsAmount by cacheNotifierColumn(
+    override var discountsAmount by cacheNotifierColumn(
             column = Bookings.discountsAmount,
             calculation = { adjustmentTotal(discounts) },
             notifier = {
                 this.grossAmount = null
             })
     @get:JsonProperty
-    var feesAmount by cacheNotifierColumn(
+    override var feesAmount by cacheNotifierColumn(
             column = Bookings.feesAmount,
             calculation = { adjustmentTotal(fees) },
             notifier = {
                 this.grossAmount = null
             })
     @get:JsonProperty
-    var addOnsAmount by cacheNotifierColumn(
+    override var addOnsAmount by cacheNotifierColumn(
             column = Bookings.addOnsAmount,
             calculation = { adjustmentTotal(addOns) },
             notifier = {
                 this.grossAmount = null
             })
     @get:JsonProperty
-    var manualAdjustmentsAmount by cacheNotifierColumn(
+    override var manualAdjustmentsAmount by cacheNotifierColumn(
             column = Bookings.manualAdjustmentsAmount,
             calculation = { adjustmentTotal(manualAdjustments) },
             notifier = {
                 this.grossAmount = null
             })
     @get:JsonProperty
-    var itemAddOnsAmount by cacheNotifierColumn(
+    override var itemAddOnsAmount by cacheNotifierColumn(
             column = Bookings.itemAddOnsAmount,
             calculation = { itemTotal({it.itemAddOnsAmount!!}) },
             notifier = {
@@ -126,18 +127,20 @@ class Booking(id: EntityID<Int>) : PrimaryEntity(id, Bookings), Weighable {
                         manualAdjustmentsAmount!! + itemAddOnsAmount!!
             },
             notifier = {
-                this.bookingTotal = null
+                this.totalAmount = null
             })
     @get:JsonProperty
-    var bookingTotal : BigDecimal? by cacheColumn(
-            column = Bookings.bookingTotal,
+    override var totalAmount: BigDecimal? by cacheColumn(
+            column = Bookings.totalAmount,
             calculation = {
                 BigZero.max(grossAmount!!)
             })
+    @get:JsonProperty
+    var taxAmount by Bookings.taxAmount
     
     fun populateCaches() {
         items.forEach(BookingItem::populateCaches)
-        bookingTotal!!
+        totalAmount!!
     }
     
     private fun itemTotal(operator: (BookingItem) -> BigDecimal) : BigDecimal {

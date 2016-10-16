@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import ticketpile.service.database.BookingItemAddOns
 import ticketpile.service.database.BookingItems
 import ticketpile.service.database.Tickets
+import ticketpile.service.model.transformation.Weighable
 import ticketpile.service.util.BigZero
 import ticketpile.service.util.PrimaryEntity
 import ticketpile.service.util.RelationalEntity
@@ -32,7 +33,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
     override val tickets by Ticket childrenOn Tickets.parent
 
     @get:JsonProperty
-    var basePrice : BigDecimal? by cacheNotifierColumn(
+    override var basePrice : BigDecimal? by cacheNotifierColumn(
             column = BookingItems.basePrice,
             calculation = { ticketTotal({it.basePrice}) },
             notifier = {
@@ -41,7 +42,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
             })
 
     @get:JsonProperty
-    var discountsAmount : BigDecimal? by cacheNotifierColumn(
+    override var discountsAmount : BigDecimal? by cacheNotifierColumn(
             column = BookingItems.discountsAmount,
             calculation = { ticketTotal({it.discountsAmount!!}) },
             notifier = {
@@ -50,7 +51,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
             })
 
     @get:JsonProperty
-    var feesAmount : BigDecimal? by cacheNotifierColumn(
+    override var feesAmount : BigDecimal? by cacheNotifierColumn(
             column = BookingItems.feesAmount,
             calculation = { ticketTotal({it.feesAmount!!}) },
             notifier = {
@@ -59,7 +60,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
             })
 
     @get:JsonProperty
-    var addOnsAmount : BigDecimal? by cacheNotifierColumn(
+    override var addOnsAmount : BigDecimal? by cacheNotifierColumn(
             column = BookingItems.addOnsAmount,
             calculation = { ticketTotal({it.addOnsAmount!!}) },
             notifier = {
@@ -68,7 +69,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
             })
 
     @get:JsonProperty
-    var manualAdjustmentsAmount : BigDecimal? by cacheNotifierColumn(
+    override var manualAdjustmentsAmount : BigDecimal? by cacheNotifierColumn(
             column = BookingItems.manualAdjustmentsAmount,
             calculation = { ticketTotal({it.manualAdjustmentsAmount!!}) },
             notifier = {
@@ -77,7 +78,7 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
             })
 
     @get:JsonProperty
-    var itemAddOnsAmount : BigDecimal? by cacheNotifierColumn(
+    override var itemAddOnsAmount : BigDecimal? by cacheNotifierColumn(
             column = BookingItems.itemAddOnsAmount,
             calculation = { adjustmentTotal(addOns) },
             notifier = {
@@ -94,11 +95,22 @@ class BookingItem(id: EntityID<Int>) : PrimaryEntity(id, BookingItems), Weighabl
             },
             notifier = {
                 this.booking.grossAmount = null
+                this.totalAmount = null
+            })
+    
+    @get:JsonProperty
+    override var totalAmount: BigDecimal? by cacheNotifierColumn(
+            column = BookingItems.totalAmount,
+            calculation = {
+                BigZero.max(grossAmount)
+            },
+            notifier = {
+                this.booking.totalAmount = null
             })
 
     fun populateCaches() {
         tickets.forEach(Ticket::populateCaches)
-        grossAmount!!
+        totalAmount!!
     }
     
     override fun delete() {

@@ -1,8 +1,11 @@
 package ticketpile.service.advance
 
 import org.jetbrains.exposed.sql.and
-import ticketpile.service.database.*
+import ticketpile.service.database.AddOns
+import ticketpile.service.database.Bookings
+import ticketpile.service.database.PersonCategories
 import ticketpile.service.model.*
+import ticketpile.service.model.transformation.TicketAdjustmentTransform
 import ticketpile.service.util.BigZero
 import ticketpile.service.util.decimalScale
 import ticketpile.service.util.flushEntityCache
@@ -49,6 +52,7 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
             location = locationId
             customer = bookingCustomer
             status = reservation.bookingStatus
+            taxAmount = reservation.pricing.taxAmount ?: BigZero
         }
 
         importBookingItems(booking, reservation)
@@ -100,7 +104,7 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
         // Advance tries to break down discounts on its own.
         // Undo that work, TicketPile is designed to do this better.
         val groupedDiscounts = reservation.pricing.priceAdjustments
-                .filter { it.type == 1500 }.groupBy { it.promotionID }.values.map {
+                .filter { it.type == 1500 }.groupBy { it.promotionID to it.label }.values.map {
             it.reduce { priceAdjustment1, priceAdjustment2 ->
                 AdvanceSyncError.new {
                     errorType = SyncErrorType.extraDiscountCodes
@@ -117,14 +121,10 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
         }
 
         groupedDiscounts.forEach{
-            aDiscount ->
-            val discountUsed = Discount.find {
-                (Discounts.externalSource eq source) and
-                        (Discounts.externalId eq aDiscount.promotionID)
-            }.first()
+            val discountUsed = getDiscount(it)
             BookingDiscount.new {
                 booking = targetBooking
-                amount = aDiscount.amount
+                amount = it.amount
                 discount = discountUsed
             }
         }
@@ -139,15 +139,14 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
             advanceAddOnSelection.options.filter {
                 it.label != null
             }.forEach {
-                option ->
                 val theAddOn = AddOn.find {
                     (AddOns.externalSource eq source) and
                             (AddOns.externalId eq advanceAddOnSelection.addonID)
                 }.first()
                 BookingAddOn.new {
                     addOn = theAddOn
-                    selection = option.label!!
-                    amount = theAddOn.basis.priceMethod(option.price ?: BigZero, targetBooking)
+                    selection = it.label!!
+                    amount = theAddOn.basis.priceMethod(it.price ?: BigZero, targetBooking)
                     subject = targetBooking
                 }
             }
@@ -191,20 +190,16 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
             reservation: AdvanceReservation
     ) {
         reservation.bookingItems.forEach {
-            aBookingItem: AdvanceBookingItem ->
-            val targetEvent = Event.find {
-                (Events.externalSource eq source) and
-                        (Events.externalId eq aBookingItem.availabilityID)
-            }.first()
+            val targetEvent = findAvailabilityFor(it)
             val bookingItem = BookingItem.new {
                 booking = targetBooking
                 event = targetEvent
                 externalSource = source
-                externalId = aBookingItem.bookingItemID
+                externalId = it.bookingItemID
             }
-            importTickets(aBookingItem, bookingItem)
             flushEntityCache()
-            importBookingItemAddOns(aBookingItem, bookingItem)
+            importTickets(it, bookingItem)
+            importBookingItemAddOns(it, bookingItem)
         }
     }
 
@@ -242,79 +237,112 @@ class AdvanceBookingManager(host: String, authorizationKey: String, locationId: 
             aBookingItem: AdvanceBookingItem,
             targetBookingItem: BookingItem
     ) {
-        val ticketMetadata = generatePersonCategoryTicketData(aBookingItem)
-        val erroredPersonCategories = mutableSetOf<PersonCategory>()
+        val ticketMetadata = generatePersonCategoryTicketData(aBookingItem, targetBookingItem)
+        val recycledTicketCodes = mutableListOf<AdvanceTicketCode>()
         aBookingItem.ticketCodes.forEach {
-            aTicketCode ->
-            val thePersonCategory = getPersonCategory(aTicketCode.personCategoryIndex)
+            //aTicketCode ->
+            val thePersonCategory = getPersonCategory(it.personCategoryIndex)
             val ticketData = ticketMetadata[thePersonCategory]
             if(ticketData != null && ticketData.ticketsCreated < ticketData.totalTickets) {
                 Ticket.new {
-                    code = aTicketCode.code
+                    code = it.code
                     bookingItem = targetBookingItem
                     basePrice = ticketData.ticketPrice
                     personCategory = thePersonCategory
                 }
                 ticketData.ticketsCreated++
-            } else if(ticketData != null //there were extra ticket codes
-                    && !erroredPersonCategories.contains(thePersonCategory)) {
+            } else if(ticketData != null ) {
+                // There were extra ticket codes
                 AdvanceSyncError.new {
                     errorType = SyncErrorType.extraTicketCodes
                     booking = targetBookingItem.booking
-                    message = "Advance ticket code ${aTicketCode.code} was skipped because pricing " +
+                    message = "Advance ticket code ${it.code} was skipped because pricing " +
                             "data only listed ${ticketData.totalTickets} tickets"
                 }
-                erroredPersonCategories.add(thePersonCategory)
-            } else if(!erroredPersonCategories.contains(thePersonCategory)){
+                recycledTicketCodes.add(it)
+            } else {
+                // There were no references to this Person Category in pricing
                 AdvanceSyncError.new {
                     errorType = SyncErrorType.mismatchTicketCodes
                     booking = targetBookingItem.booking
-                    message = "Advance ticket code ${aTicketCode.code} was skipped because pricing " +
+                    message = "Advance ticket code ${it.code} was skipped because pricing " +
                             "data didn't list any ${thePersonCategory.name} tickets"
                 }
+                recycledTicketCodes.add(it)
             }
         }
-        createMissingTickets(targetBookingItem, ticketMetadata)
+        createMissingTickets(targetBookingItem, ticketMetadata, recycledTicketCodes)
+        recycledTicketCodes.forEach {
+            AdvanceSyncError.new {
+                errorType = SyncErrorType.unusableTicketCode
+                booking = targetBookingItem.booking
+                message = "Skipped ${getPersonCategory(it.personCategoryIndex)} ticket ${it.code} entirely."
+            }
+        }
     }
 
     private fun generatePersonCategoryTicketData(
-            aBookingItem: AdvanceBookingItem
+            aBookingItem: AdvanceBookingItem,
+            targetBookingItem: BookingItem
     ) : Map<PersonCategory, PersonCategoryTicketData> {
         val result = mutableMapOf<PersonCategory, PersonCategoryTicketData>()
         aBookingItem.lineTotals.filter { it.type == 1101 }.forEach {
-            lineTotal ->
             val personCategory = PersonCategory.find {
-                (PersonCategories.externalSource eq source) and (PersonCategories.name eq lineTotal.label)
-            }.first()
-            val ticketPrice = lineTotal.price.setScale(decimalScale).divide(
-                    BigDecimal(lineTotal.quantity).setScale(decimalScale),
+                (PersonCategories.externalSource eq source) and (PersonCategories.name eq it.label)
+            }.firstOrNull() ?: PersonCategory.new {
+                externalId = null
+                externalSource = source
+                name = it.label
+                description = ""
+            }
+            if(personCategory.externalId == null) {
+                //flushEntityCache()
+                AdvanceSyncError.new {
+                    errorType = SyncErrorType.missingPersonCategory
+                    booking = targetBookingItem.booking
+                    message = "Reference to missing Person Category ${personCategory.name}. TicketPile version has " +
+                            "TicketPile ID {${personCategory.id.value} and no description."
+                }
+            }
+            
+            val ticketPrice = it.price.setScale(decimalScale).divide(
+                    BigDecimal(it.quantity).setScale(decimalScale),
                     RoundingMode.HALF_UP
             )
-            result[personCategory] = PersonCategoryTicketData(ticketPrice, lineTotal.quantity)
+            result[personCategory] = PersonCategoryTicketData(ticketPrice, it.quantity)
         }
         return result
     }
 
     private fun createMissingTickets(
             targetBookingItem: BookingItem,
-            ticketMetadata: Map<PersonCategory, PersonCategoryTicketData>
+            ticketMetadata: Map<PersonCategory, PersonCategoryTicketData>,
+            recycledTicketCodes : MutableList<AdvanceTicketCode>
     ) {
         ticketMetadata.forEach {
             val thePersonCategory = it.key
             val ticketData = it.value
-            var hasErrored = false
             while(ticketData.ticketsCreated < ticketData.totalTickets) {
-                if(!hasErrored) {
+                var code = "No Ticket Code Generated"
+                if(recycledTicketCodes.isEmpty()) {
                     AdvanceSyncError.new {
                         errorType = SyncErrorType.missingTicketCodes
                         booking = targetBookingItem.booking
                         message = "Created missing ticket code for ${thePersonCategory.name} ticket on Advance " +
                                 "booking item ${targetBookingItem.externalId}"
                     }
-                    hasErrored = true
+                } else {
+                    val ticketCode = recycledTicketCodes.removeAt(0)
+                    code = ticketCode.code
+                    AdvanceSyncError.new {
+                        errorType = SyncErrorType.missingTicketCodes
+                        booking = targetBookingItem.booking
+                        message = "Recycled skipped ${getPersonCategory(ticketCode.personCategoryIndex)} " +
+                                "ticket code $code as as a {${thePersonCategory.name} ticket instead."
+                    }
                 }
                 Ticket.new {
-                    code = "No Ticket Code Generated"
+                    this.code = code
                     bookingItem = targetBookingItem
                     basePrice = ticketData.ticketPrice
                     personCategory = thePersonCategory

@@ -7,7 +7,9 @@ import graphql.schema.*
 import graphql.schema.GraphQLFieldDefinition.newFieldDefinition
 import graphql.schema.GraphQLObjectType.newObject
 import org.joda.time.DateTime
-import ticketpile.service.model.*
+import ticketpile.service.model.Booking
+import ticketpile.service.model.BookingItem
+import ticketpile.service.model.Ticket
 import ticketpile.service.security.ApplicationUser
 
 /**
@@ -21,7 +23,7 @@ fun createGraphQL(user : ApplicationUser) : GraphQL {
 private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
     val queryRoot: GraphQLObjectType =
         newObject().name("QueryRoot")
-        .field(newFieldDefinition().type(GraphQLTypeReference("BookingsResult"))
+        .field(newFieldDefinition().type(GraphQLTypeReference("BookingSearch"))
             .name("bookings")
             .argument(GraphQLArgument("locations",
                     "Locations to search in", GraphQLList(GraphQLInt), listOf(-1)))
@@ -40,7 +42,7 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
             .argument(GraphQLArgument("offset",
                     "Offset for the limit parameter", GraphQLInt, 0))
             .dataFetcher {
-                    BookingQuery(
+                    BookingSearch(
                         locations = (it.arguments["locations"] as List<Int>)
                                 .intersect(user.locations).toList(),
                         eventsBefore = if (it.arguments["withEventsBefore"] != null)
@@ -59,46 +61,40 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
         .build()
 
     val bookingsResult: GraphQLObjectType = 
-        newObject().name("BookingsResult")
+        newObject().name("BookingSearch")
         .field(newFieldDefinition().type(GraphQLInt)
             .name("totalCount")
             .description("The total number of bookings returned by the query")
             .dataFetcher {
-                (it.source as BookingQuery).totalCount
+                (it.source as BookingSearch).totalCount
             }.build())
         .field(newFieldDefinition().type(GraphQLBigDecimal)
             .name("pageTotal")
             .description("The total gross for bookings on this page (defined by limit and offset)")
             .dataFetcher {
-               (it.source as BookingQuery).pageTotal
-            }
-            .build())
-        .field(newFieldDefinition().type(GraphQLBigDecimal)
-            .name("totalAmount")
-            .description("The total gross for all bookings found in this search")
-            .dataFetcher {
-                (it.source as BookingQuery).totalAmount
+               (it.source as BookingSearch).pageTotal
             }
             .build())
         .field(newFieldDefinition().type(GraphQLList(GraphQLTypeReference("Booking")))
             .name("results")
             .description("A list of bookings that matched the query")
             .dataFetcher {
-                (it.source as BookingQuery).results
+                (it.source as BookingSearch).results
             }
             .build())
         .field(newFieldDefinition().type(GraphQLInt)
             .name("limit")
             .description("The booking limit of the query")
             .dataFetcher {
-                (it.source as BookingQuery).limit
+                (it.source as BookingSearch).limit
             }.build())
         .field(newFieldDefinition().type(GraphQLInt)
             .name("offset")
             .description("The offset for the limit of the query")
             .dataFetcher {
-                (it.source as BookingQuery).offset
+                (it.source as BookingSearch).offset
             }.build())
+        .weighableFields("BookingSearch")
         .build()
 
     val booking: GraphQLObjectType =
@@ -122,12 +118,7 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
                     (it.source as Booking).status
                 }
                 .build())
-            .field(newFieldDefinition().type(GraphQLBigDecimal)
-                .name("totalAmount")
-                .dataFetcher {
-                    (it.source as Booking).bookingTotal!!
-                }
-                .build())
+            .weighableFields("Booking")
             .field(newFieldDefinition().type(GraphQLList(GraphQLTypeReference("BookingItem")))
                 .name("items")
                 .dataFetcher {
@@ -159,90 +150,6 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
                 }
                 .build())
         .build()
-    
-    val discountAdjustment: GraphQLObjectType =
-        newObject().name("DiscountAdjustment")
-            .field(newFieldDefinition().type(GraphQLInt)
-                .name("promotionId")
-                .dataFetcher {
-                    (it.source as DiscountAdjustment<*>).discount.externalId!!
-                }
-                .build())
-            .field(newFieldDefinition().type(GraphQLString)
-                .name("code")
-                .dataFetcher {
-                    (it.source as DiscountAdjustment<*>).discount.name
-                }
-                .build())
-            .field(newFieldDefinition().type(GraphQLString)
-                .name("description")
-                .dataFetcher {
-                    (it.source as DiscountAdjustment<*>).discount.description
-                }
-                .build())
-            .field(newFieldDefinition().type(GraphQLBigDecimal)
-                .name("amount")
-                .dataFetcher {
-                    (it.source as DiscountAdjustment<*>).amount
-                }
-                .build())
-            .build()
-
-
-
-    val addOnAdjustment: GraphQLObjectType =
-        newObject().name("AddOnAdjustment")
-            .field(newFieldDefinition().type(GraphQLString)
-                .name("name")
-                .dataFetcher {
-                    (it.source as AddOnAdjustment<*>).addOn.name
-                }
-                .build())
-            .field(newFieldDefinition().type(GraphQLString)
-                .name("selection")
-                .dataFetcher {
-                    (it.source as AddOnAdjustment<*>).selection
-                }
-                .build())
-            .field(newFieldDefinition().type(GraphQLBigDecimal)
-                .name("amount")
-                .dataFetcher {
-                    (it.source as AddOnAdjustment<*>).amount
-                }
-                .build())
-            .build()
-
-    val manualAdjustment: GraphQLObjectType =
-        newObject().name("ManualAdjustment")
-            .field(newFieldDefinition().type(GraphQLString)
-                .name("description")
-                .dataFetcher {
-                    (it.source as ManualAdjustment<*>).description
-                }
-                .build())
-            .field(newFieldDefinition().type(GraphQLBigDecimal)
-                .name("amount")
-                .dataFetcher {
-                    (it.source as ManualAdjustment<*>).amount
-                }
-                .build())
-            .build()
-
-    val feeAdjustment : GraphQLObjectType =
-        newObject().name("FeeAdjustment")
-            .field(newFieldDefinition().type(GraphQLString)
-                .name("description")
-                .dataFetcher {
-                    (it.source as FeeAdjustment<*>).description
-                }
-                .build())
-            .field(newFieldDefinition().type(GraphQLBigDecimal)
-                .name("amount")
-                .dataFetcher {
-                    (it.source as FeeAdjustment<*>).amount
-                }
-                .build())
-            .build()
 
     val bookingItem: GraphQLObjectType = newObject().name("BookingItem")
         .field(newFieldDefinition().type(GraphQLList(GraphQLTypeReference("Ticket")))
@@ -257,6 +164,7 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
                 (it.source as BookingItem).addOns
             }
             .build())
+        .weighableFields("BookingItem")
         .build()
     
     val ticket: GraphQLObjectType = newObject().name("Ticket")
@@ -266,25 +174,7 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
                 (it.source as Ticket).code
             }
             .build())
-        .field(newFieldDefinition().type(GraphQLBigDecimal)
-            .name("basePrice")
-            .dataFetcher {
-                (it.source as Ticket).basePrice
-            }
-            .build())
-        .field(newFieldDefinition().type(GraphQLBigDecimal)
-            .name("discountedPrice")
-            .dataFetcher {
-                (it.source as Ticket).discountedPrice
-            }
-            .build())
-
-        .field(newFieldDefinition().type(GraphQLBigDecimal)
-            .name("totalAmount")
-            .dataFetcher {
-                (it.source as Ticket).grossAmount!!
-            }
-            .build())
+        .weighableFields("Ticket")
         .build()
     
     // Create the schema
