@@ -164,10 +164,10 @@ class AdvancePersonCategoryResponse() {
 class AdvancePersonCategory() {
     var personCategoryIndex = -1
     var label : String? = ""
-    var categoryDescription = ""
+    var categoryDescription : String? = ""
 }
 
-class AdvanceProductsReponse() {
+class AdvanceProductsResponse() {
     var products = emptyList<AdvanceProduct>()
 }
 

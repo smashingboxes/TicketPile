@@ -140,17 +140,17 @@ open class AdvanceManager {
                 externalId = externalPCId
                 externalSource = source
                 name = aPersonCategory.label ?: "unnamed"
-                description = aPersonCategory.categoryDescription
+                description = aPersonCategory.categoryDescription ?: ""
             }
             personCategory.name = aPersonCategory.label ?: "unnamed"
-            personCategory.description = aPersonCategory.categoryDescription
+            personCategory.description = aPersonCategory.categoryDescription ?: ""
         }
     }
     
     fun importProducts() {
         val productsResponse = api20Request(
                 "/merchants/$locationId/products?includeDeleted=true&merchantID=$locationId",
-                AdvanceProductsReponse::class.java)
+                AdvanceProductsResponse::class.java)
         productsResponse.products.forEach {
             aProduct: AdvanceProduct ->
             importProduct(aProduct)
