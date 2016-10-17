@@ -4,7 +4,7 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
-import ticketpile.service.springconfig.BearerToken
+import ticketpile.service.security.TicketPileToken
 import ticketpile.service.util.AuthenticationException
 import ticketpile.service.util.transaction
 import javax.servlet.http.HttpServletRequest
@@ -22,7 +22,7 @@ open class TPGraphQLController {
     fun executeOperation(
             @RequestBody body : Map<String, Any>
     ): Any {
-        val auth = SecurityContextHolder.getContext().authentication as BearerToken
+        val auth = SecurityContextHolder.getContext().authentication as TicketPileToken
         val graphQL = createGraphQL(auth.user!!)
         val query = body["query"] as String
         @Suppress("UNCHECKED_CAST")
@@ -48,7 +48,7 @@ open class TPGraphQLController {
                  @Suppress("UNUSED_PARAMETER") @RequestHeader(value = "graphql-schema", required = false) graphQLSchemaName: String?,
                  @Suppress("UNUSED_PARAMETER") httpServletRequest: HttpServletRequest
     ): ResponseEntity<Map<String, Any>> {
-        val auth = SecurityContextHolder.getContext().authentication as BearerToken
+        val auth = SecurityContextHolder.getContext().authentication as TicketPileToken
         if(auth.user == null) {
             throw AuthenticationException("User must be logged in to access GraphQL.")
         }

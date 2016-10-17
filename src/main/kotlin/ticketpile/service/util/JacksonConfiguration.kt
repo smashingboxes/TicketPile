@@ -1,4 +1,4 @@
-package ticketpile.service.springconfig
+package ticketpile.service.util
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.MapperFeature
@@ -8,9 +8,13 @@ import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import ticketpile.service.util.TransactionSerializerModifier
 
 /**
+ * Configures the Jackson [ObjectMapper] to not auto-detect anything
+ * for serialization (forcing the use of [JsonProperty] annotations).
+ * 
+ * Also configures Joda, Kotlin and [TransactionSerializerModifier] components.
+ * 
  * Created by jonlatane on 8/29/16.
  */
 @Configuration

@@ -28,7 +28,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2
 import ticketpile.service.advance.initializeSynchronization
 import ticketpile.service.database.initializeModel
 import ticketpile.service.security.initializeSecurity
-import ticketpile.service.springconfig.apiTokenHeader
+import ticketpile.service.security.apiTokenHeader
 import ticketpile.service.util.transaction
 import javax.sql.DataSource
 

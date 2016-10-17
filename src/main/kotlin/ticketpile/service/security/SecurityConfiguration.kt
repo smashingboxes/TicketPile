@@ -1,4 +1,4 @@
-package ticketpile.service.springconfig
+package ticketpile.service.security
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
@@ -17,10 +17,6 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import ticketpile.service.AdvanceSSOConfig
 import ticketpile.service.advance.AdvanceManager
-import ticketpile.service.security.AdvanceSSOUser
-import ticketpile.service.security.ApplicationUser
-import ticketpile.service.security.UserAuthKey
-import ticketpile.service.security.UserAuthKeys
 import ticketpile.service.util.transaction
 import javax.servlet.FilterChain
 import javax.servlet.http.HttpServletRequest
@@ -106,26 +102,26 @@ open class BearerTokenFilter() : OncePerRequestFilter() {
             }
         }
 
-        val auth = BearerToken(user)
+        val auth = TicketPileToken(user)
         SecurityContextHolder.getContext().authentication = auth
         filterChain?.doFilter(request, response)
     }
 }
 
-internal object provider : AuthenticationProvider {
+private object provider : AuthenticationProvider {
     override fun supports(authentication: Class<*>?): Boolean {
-        return BearerToken::class.java.isAssignableFrom(authentication)
+        return TicketPileToken::class.java.isAssignableFrom(authentication)
     }
 
     override fun authenticate(authentication: Authentication?): Authentication? {
-        val user = (authentication as BearerToken).user
+        val user = (authentication as TicketPileToken).user
         if(user != null)
             return authentication
         return null
     }
 }
 
-internal class BearerToken(val user : ApplicationUser?) : AbstractAuthenticationToken(emptyList()) {
+internal class TicketPileToken(val user : ApplicationUser?) : AbstractAuthenticationToken(emptyList()) {
     override fun getCredentials(): ApplicationUser? {
         return user
     }
