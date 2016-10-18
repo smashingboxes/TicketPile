@@ -15,11 +15,9 @@ import ticketpile.service.util.RelationalEntityClass
 import java.math.BigDecimal
 
 /**
+ * Corresponds to the things about Advance Discounts necessary to
+ * calculate ticket values accurately.
  * Created by jonlatane on 10/7/16.
- */
-
-/**
- * 
  */
 class Discount(id: EntityID<Int>) : PrimaryEntity(id, Discounts) {
     companion object : IntEntityClass<Discount>(Discounts)
@@ -35,11 +33,18 @@ class Discount(id: EntityID<Int>) : PrimaryEntity(id, Discounts) {
 
     private val _products by DiscountProduct childrenOn DiscountProducts.parent
     private val _personCategories by DiscountPersonCategory childrenOn DiscountPersonCategories.parent
+
+    /**
+     * Corresponds to Advance Product Associations
+     */
     val products: Iterable<Product> get() {
         val result = mutableListOf<Product>()
         _products.forEach { result.add(it.product) }
         return result
     }
+    /**
+     * Corresponds to the Person Categories set on Advance Discounts.
+     */
     val personCategories: Iterable<PersonCategory> get() {
         val result = mutableListOf<PersonCategory>()
         _personCategories.forEach { result.add(it.personCategory) }

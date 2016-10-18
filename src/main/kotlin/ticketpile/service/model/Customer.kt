@@ -7,6 +7,8 @@ import ticketpile.service.database.Customers
 import ticketpile.service.util.PrimaryEntity
 
 /**
+ * Corresponds directly to an Advance customer.
+ * 
  * Created by jonlatane on 9/19/16.
  */
 class Customer(id: EntityID<Int>) : PrimaryEntity(id, Customers) {

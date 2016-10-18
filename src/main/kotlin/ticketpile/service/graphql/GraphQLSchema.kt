@@ -26,7 +26,7 @@ private fun createGraphQLSchema(user : ApplicationUser) : GraphQLSchema {
         .field(newFieldDefinition().type(GraphQLTypeReference("BookingSearch"))
             .name("bookings")
             .argument(GraphQLArgument("locations",
-                    "Locations to search in", GraphQLList(GraphQLInt), listOf(-1)))
+                    "Locations to search in", GraphQLList(GraphQLInt), user.locations))
             .argument(GraphQLArgument("withEventsAfter",
                     "Limit bookings to those with events on a range of dates", GraphQLString, null))
             .argument(GraphQLArgument("withEventsBefore",

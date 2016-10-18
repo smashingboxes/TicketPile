@@ -7,6 +7,8 @@ import ticketpile.service.database.Products
 import ticketpile.service.util.PrimaryEntity
 
 /**
+ * Corresponds to an Advance product.
+ * 
  * Created by jonlatane on 10/7/16.
  */
 

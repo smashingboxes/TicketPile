@@ -7,7 +7,15 @@ import ticketpile.service.util.decimalScale
 import java.math.BigDecimal
 
 /**
+ * Methods used to project values of [Adjustments] on [Booking] and [BookingItem]s
+ * onto [Ticket]s
  * Created by jonlatane on 10/15/16.
+ */
+
+/**
+ * Weighs the initial value onto every ticket with the same value.
+ * 
+ * Example: $10 adjustment, 5 tickets => $2 adjustment per ticket
  */
 val weighByApplicableTicketCount = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
@@ -17,6 +25,13 @@ val weighByApplicableTicketCount = {
     else
         BigZero
 }
+
+/**
+ * Weighs the initial value onto every ticket based on its calculated gross.
+ * 
+ * Example: $5 adjustment, 1 $10 ticket, 1 $15 ticket 
+ *          => $2 adjustment on $10 ticket, $3 adjustment on $15 ticket
+ */
 val weighByApplicableGrossRevenue = {
     amount : BigDecimal, weighable: Weighable, ticket: Ticket, applicable: (Ticket) -> Boolean ->
     val applicableTickets = applicableTickets(weighable, applicable)

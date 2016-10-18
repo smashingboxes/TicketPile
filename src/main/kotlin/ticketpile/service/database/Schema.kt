@@ -125,20 +125,12 @@ object Customers : RelationalTable("customer") {
     val address2 = varchar("address2", length = 128).nullable()
 }
 
-//Adjustments allowed by data model
+// Adjustments allowed by Advance's data model
 object BookingAddOns : AddOnTable("bookingAddOn", Bookings)
 object BookingDiscounts : DiscountTable("bookingDiscount", Bookings)
 object BookingManualAdjustments : ManualAdjustmentTable("bookingManualAdjustment", Bookings)
 object BookingFees : FeeTable("bookingFee", Bookings)
-
-//Event Adjustments relate to an Event and a Booking
-//and affect pricing of all Tickets on an Event.
 object BookingItemAddOns : AddOnTable("bookingItemAddOn", BookingItems)
-
-// Things not supported by ZOZI
-//object TicketAddOns : AddOnTable("ticketAddOn", Tickets)
-//object TicketDiscounts : DiscountTable("ticketDiscount", Tickets)
-//object TicketManualAdjustments : ManualAdjustmentTable("ticketManualAdjustment", Tickets)
 
 // Mappings of Booking/BookingItem adjustment amounts to Tickets
 // Allows us to define programmatically how ticket prices are affected

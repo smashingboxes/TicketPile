@@ -31,12 +31,14 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
     @get:JsonProperty
     override var basePrice by Tickets.basePrice
     
+    // Fields to references mapped adjustments
     val addOns by TicketBookingAddOn childrenOn TicketBookingAddOns.parent
     val manualAdjustments by TicketBookingManualAdjustment childrenOn TicketBookingManualAdjustments.parent
     val fees by TicketBookingFee childrenOn TicketBookingFees.parent
     val discounts by TicketBookingDiscount childrenOn TicketBookingDiscounts.parent
     val itemAddOns by TicketBookingItemAddOn childrenOn TicketBookingItemAddOns.parent
 
+    // Adjustment value caches
     @get:JsonProperty
     override var discountsAmount by cacheNotifierColumn(
             column = Tickets.discountsAmount,
@@ -97,11 +99,8 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
             notifier = {
                 this.bookingItem.totalAmount = null
             })
-    @get:JsonProperty
-    val discountedPrice : BigDecimal get() {
-        return basePrice + discountsAmount!!
-    }
     
+    // Adjustment count caches
     @get:JsonProperty
     var discountCount by cacheColumn(
             column = Tickets.discountCount,
@@ -171,17 +170,6 @@ class Ticket(id: EntityID<Int>) : PrimaryEntity(id, Tickets), Weighable {
         }
         super.delete()
     }
-}
-
-class PersonCategory(id: EntityID<Int>) : PrimaryEntity(id, PersonCategories) {
-    companion object : IntEntityClass<PersonCategory>(PersonCategories)
-
-    @get:JsonProperty
-    val personCategoryId by PK
-    @get:JsonProperty
-    var name by PersonCategories.name
-    @get:JsonProperty
-    var description by PersonCategories.description
 }
 
 class TicketBookingAddOn(id: EntityID<Int>) : RelationalEntity(id), AddOnAdjustment<Ticket>, MappedAdjustment<BookingAddOn>{

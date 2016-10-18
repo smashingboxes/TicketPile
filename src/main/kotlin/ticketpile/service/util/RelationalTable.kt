@@ -6,12 +6,15 @@ import org.jetbrains.exposed.sql.Column
 import java.math.BigDecimal
 
 /**
+ * Fundamental components of TicketPile's financial computation model.
+ * 
  * Created by jonlatane on 10/9/16.
  */
+
 val decimalScale = 30
 val decimalPrecision = 65
-val BigZero = BigDecimal.ZERO.setScale(decimalScale)
-val BigOne = BigDecimal.ONE.setScale(decimalScale)
+val BigZero : BigDecimal = BigDecimal.ZERO.setScale(decimalScale)
+val BigOne : BigDecimal = BigDecimal.ONE.setScale(decimalScale)
 
 open class RelationalTable(val singularName : String) : IntIdTable() {
     var externalSource = varchar(name="externalHost", length = 128).nullable().index()
